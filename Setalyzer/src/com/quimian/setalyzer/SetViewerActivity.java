@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import android.view.SurfaceView;
@@ -194,9 +195,36 @@ public class SetViewerActivity extends Activity implements Callback {
 		Log.i("setalyzer","size is " + max.width + "x" + max.height);
 		parameters.setPreviewSize(max.width, max.height);
 	    mCamera.setParameters(parameters);
+	    setCameraDisplayOrientation(this, 0, mCamera);
 
 	    mCamera.startPreview();
 	}
+	
+	// From: http://stackoverflow.com/questions/4645960/how-to-set-android-camera-orientation-properly
+	public static void setCameraDisplayOrientation(Activity activity,
+	         int cameraId, android.hardware.Camera camera) {
+	     android.hardware.Camera.CameraInfo info =
+	             new android.hardware.Camera.CameraInfo();
+	     android.hardware.Camera.getCameraInfo(cameraId, info);
+	     int rotation = activity.getWindowManager().getDefaultDisplay()
+	             .getRotation();
+	     int degrees = 0;
+	     switch (rotation) {
+	         case Surface.ROTATION_0: degrees = 0; break;
+	         case Surface.ROTATION_90: degrees = 90; break;
+	         case Surface.ROTATION_180: degrees = 180; break;
+	         case Surface.ROTATION_270: degrees = 270; break;
+	     }
+
+	     int result;
+	     if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+	         result = (info.orientation + degrees) % 360;
+	         result = (360 - result) % 360;  // compensate the mirror
+	     } else {  // back-facing
+	         result = (info.orientation - degrees + 360) % 360;
+	     }
+	     camera.setDisplayOrientation(result);
+	 }
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
