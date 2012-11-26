@@ -32,28 +32,40 @@ public class SetalyzerImageCapture implements PictureCallback {
 	}
 	public void onPictureTaken(byte[] data, Camera camera) {
 		Log.i("Setalyzer", "Picture Callback: " + type);
-		if (type == JPEG) {
-			try {
-				File myFile = new File(Environment.getExternalStorageDirectory().getPath() + "/setalyzer.jpg");
-				myFile.createNewFile();
-				FileOutputStream fOut = new FileOutputStream(myFile);
-				BufferedOutputStream myOutWriter = new BufferedOutputStream(fOut);
-				myOutWriter.write(data);
-				myOutWriter.close();
-				fOut.close();
-			} 
-			catch (Exception e) {
-				Log.e("Setalyzer", "File writing error: " + e);
+		if (type == POSTVIEW) {
+			if (data != null) {
+				Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length);
+				if (bmp != null) {
+					this.activity.displayImage(bmp);
+				}
+				else {
+					Log.i("Setalyzer", "bmp is null, data.legnth is " + data.length);
+				}
 			}
 			
-			// Assuming that the file is guaranteed to be readable now... I assume I read my own writes?
-			Log.i("Setalyzer", "opening: " + Environment.getExternalStorageDirectory().getPath() + "/setalyzer.jpg");
-			BitmapFactory.Options options = new BitmapFactory.Options();
-			options.inSampleSize = 8;
-			Bitmap bmp = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath() + "/setalyzer.jpg", options);
-			Log.i("Setalyzer", "bmp has " + bmp.getByteCount() + " pixels");
-	    	ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
-			ImageSInt16 lines = LineDetector.detectLines(image, ImageUInt8.class, ImageSInt16.class);
+		}
+//		if (type == JPEG) {
+//			try {
+//				File myFile = new File(Environment.getExternalStorageDirectory().getPath() + "/setalyzer.jpg");
+//				myFile.createNewFile();
+//				FileOutputStream fOut = new FileOutputStream(myFile);
+//				BufferedOutputStream myOutWriter = new BufferedOutputStream(fOut);
+//				myOutWriter.write(data);
+//				myOutWriter.close();
+//				fOut.close();
+//			} 
+//			catch (Exception e) {
+//				Log.e("Setalyzer", "File writing error: " + e);
+//			}
+//			
+//			// Assuming that the file is guaranteed to be readable now... I assume I read my own writes?
+//			Log.i("Setalyzer", "opening: " + Environment.getExternalStorageDirectory().getPath() + "/setalyzer.jpg");
+//			BitmapFactory.Options options = new BitmapFactory.Options();
+//			options.inSampleSize = 8;
+//			Bitmap bmp = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath() + "/setalyzer.jpg", options);
+//			Log.i("Setalyzer", "bmp has " + bmp.getByteCount() + " pixels");
+//	    	ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
+//			ImageSInt16 lines = LineDetector.detectLines(image, ImageUInt8.class, ImageSInt16.class);
 			
 //	    	Bitmap result = ConvertBitmap.grayToBitmap(lines, Bitmap.Config.ARGB_8888);
 
@@ -71,7 +83,7 @@ public class SetalyzerImageCapture implements PictureCallback {
 //				Log.e("Setalyzer", "File writing error: " + e);
 //			}
 			
-			camera.startPreview();
+//			camera.startPreview();
 //			Bitmap bmp;
 //			if (data == null) {
 //				Log.i("Setalyzer", "data is null");
@@ -90,7 +102,7 @@ public class SetalyzerImageCapture implements PictureCallback {
 //			ImageUInt8 lines = LineDetector.detectLines(image, ImageUInt8.class, ImageSInt16.class);
 //			
 //			this.activity.displayImage(lines);
-		}
+//		}
 		Log.i("Setalyzer", "Picture Callback: " + type + " done");
 	}
 }

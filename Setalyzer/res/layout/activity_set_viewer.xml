@@ -11,21 +11,15 @@
          TextureView, etc.
     -->
 
-    <SurfaceView
-        android:id="@+id/fullscreen_content"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:keepScreenOn="true"
-        android:text="@string/dummy_content"
-        android:textColor="#33b5e5"
-        android:textSize="50sp"
-        android:textStyle="bold" />
-
     <!--
          This FrameLayout insets its children based on system windows using
          android:fitsSystemWindows.
     -->
+
+    <TextureView
+        android:id="@+id/fullscreen_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -50,12 +44,6 @@
                 android:layout_weight="1"
                 android:text="@string/dummy_button" />
         </LinearLayout>
-
-        <ImageView
-            android:id="@+id/resultImageView"
-            android:layout_width="match_parent"
-            android:layout_height="309dp"
-            android:src="@drawable/ic_launcher" />
 
     </FrameLayout>
 

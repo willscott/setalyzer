@@ -1,34 +1,26 @@
 package com.quimian.setalyzer;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.List;
-
-import boofcv.android.ConvertBitmap;
-import boofcv.struct.image.ImageUInt8;
-
-import com.quimian.setalyzer.util.SystemUiHider;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.ImageFormat;
-import android.graphics.PixelFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
-import android.hardware.Camera.PictureCallback;
-import android.hardware.Camera.ShutterCallback;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceHolder.Callback;
-import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
+
+import com.quimian.setalyzer.util.SystemUiHider;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -36,7 +28,7 @@ import android.widget.ImageView;
  * 
  * @see SystemUiHider
  */
-public class SetViewerActivity extends Activity implements Callback {
+public class SetViewerActivity extends Activity implements TextureView.SurfaceTextureListener {
 	/**
 	 * Whether or not the system UI should be auto-hidden after
 	 * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
@@ -69,27 +61,31 @@ public class SetViewerActivity extends Activity implements Callback {
 	 * The camera displayed by this activity.
 	 */
 	private Camera mCamera;
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		Log.i(getString(R.string.app_name), "onCreate");
-
 		super.onCreate(savedInstanceState);
 
-		Log.i(getString(R.string.app_name), "YO");
+		Log.i(getString(R.string.app_name), "onCreate");
 		setContentView(R.layout.activity_set_viewer);
 
 		final View controlsView = findViewById(R.id.fullscreen_content_controls);
-		final SurfaceView contentView = (SurfaceView)findViewById(R.id.fullscreen_content);
+		final TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
 		
-		contentView.getHolder().addCallback(this);
-		mCamera = Camera.open();
-		try {
-			mCamera.setPreviewDisplay(contentView.getHolder());
-		} catch (IOException e) {
-			Log.e(getString(R.string.app_name), "Failed to open camera");
+		if (contentView == null) {
+			Log.i("Setalyzer", "contentView is null");
 		}
-		mCamera.startPreview();
+        contentView.setSurfaceTextureListener(this);
+
+//        setContentView(contentView);
+//		contentView.getHolder().addCallback(this);
+//		mCamera = Camera.open();
+//		try {
+//			mCamera.setPreviewDisplay(contentView.getHolder());
+//		} catch (IOException e) {
+//			Log.e(getString(R.string.app_name), "Failed to open camera");
+//		}
+//		mCamera.startPreview();
 		
 		
 		// Set up an instance of SystemUiHider to control the system UI for
@@ -157,20 +153,60 @@ public class SetViewerActivity extends Activity implements Callback {
 		
 		
 		// Setup handlers to grab pictures when they're taken
-		final PictureCallback rawHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.RAW, this);
-		final PictureCallback postviewHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.POSTVIEW, this);
-		final PictureCallback jpegHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.JPEG, this);
-		final ShutterCallback shutterHandler = new SetalyzerShutterCallback(getApplicationContext());
+//		final PictureCallback rawHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.RAW, this);
+//		final PictureCallback postviewHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.POSTVIEW, this);
+//		final PictureCallback jpegHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.JPEG, this);
+//		final ShutterCallback shutterHandler = new SetalyzerShutterCallback(getApplicationContext());
 
 		Button button = (Button) findViewById(R.id.dummy_button);
 		button.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				mCamera.takePicture(shutterHandler, rawHandler, postviewHandler, jpegHandler);
+//				mCamera.takePicture(shutterHandler, rawHandler, postviewHandler, jpegHandler);
+				Bitmap bmp = contentView.getBitmap();
+				displayImage(bmp);
+				
 			}
 		});
+		
 	} //end of onCreate
 	
+	
+	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+		initializeCamera(surface);
+        
+    }
+
+    private void initializeCamera(SurfaceTexture surface) {
+    	Log.i("Setalyzer", "initializeCamera");
+    	mCamera = Camera.open();
+
+        try {
+            mCamera.setPreviewTexture(surface);
+            mCamera.startPreview();
+        } catch (IOException ioe) {
+            // Something bad happened
+        }		
+	}
+
+
+	public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+        // Ignored, Camera does all the work for us
+    }
+
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        if (mCamera != null) {
+        	mCamera.stopPreview();
+        	mCamera.setPreviewCallback(null);
+        	mCamera.release();
+        	mCamera = null;
+        }
+        return true;
+    }
+
+    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+        // Invoked every time there's a new Camera preview frame
+    }
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
@@ -215,21 +251,21 @@ public class SetViewerActivity extends Activity implements Callback {
 		mHideHandler.postDelayed(mHideRunnable, delayMillis);
 	}
 
-	@Override
-	public void surfaceChanged(SurfaceHolder holder, int format, int width,
-			int height) {
-		Camera.Parameters parameters = mCamera.getParameters();
-
-	    List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
-	    Camera.Size max = previewSizes.get(0);
-	    
-		Log.i("setalyzer","size is " + max.width + "x" + max.height);
-		parameters.setPreviewSize(max.width, max.height);
-	    mCamera.setParameters(parameters);
-	    setCameraDisplayOrientation(this, 0, mCamera);
-
-	    mCamera.startPreview();
-	}
+//	@Override
+//	public void surfaceChanged(SurfaceHolder holder, int format, int width,
+//			int height) {
+//		Camera.Parameters parameters = mCamera.getParameters();
+//
+//	    List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
+//	    Camera.Size max = previewSizes.get(0);
+//	    
+//		Log.i("setalyzer","size is " + max.width + "x" + max.height);
+//		parameters.setPreviewSize(max.width, max.height);
+//	    mCamera.setParameters(parameters);
+//	    setCameraDisplayOrientation(this, 0, mCamera);
+//
+//	    mCamera.startPreview();
+//	}
 	
 	// From: http://stackoverflow.com/questions/4645960/how-to-set-android-camera-orientation-properly
 	public static void setCameraDisplayOrientation(Activity activity,
@@ -258,64 +294,77 @@ public class SetViewerActivity extends Activity implements Callback {
 	     camera.setDisplayOrientation(result);
 	 }
 
-	@Override
-	public void surfaceCreated(SurfaceHolder holder) {
-		if (mCamera != null) {
-			mCamera.stopPreview();
-			mCamera.release();
-		}
-		Log.i(getString(R.string.app_name), "Opening camera");
-
-		mCamera = Camera.open();
-
-		// Set the previewSize of the camera by getting supported preview sizes and picking one
-		Camera.Parameters parameters = mCamera.getParameters();
-		List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
-	    Camera.Size max = previewSizes.get(previewSizes.size()-1);
-		Log.i("Setalyzer","size is " + max.width + "x" + max.height);
-		parameters.setPreviewSize(max.width, max.height);
-		
-	    mCamera.setParameters(parameters);
-	    
-	    setCameraDisplayOrientation(this, 0, mCamera);
-	
-	    holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-	    
-		try {
-			mCamera.setPreviewDisplay(holder);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		Log.i("Setalyzer", "About to startPreview()");
-		mCamera.startPreview();
-	}
-
-	@Override
-	public void surfaceDestroyed(SurfaceHolder holder) {
-		if (mCamera != null) {
-			mCamera.stopPreview();
-			mCamera.release();
-			mCamera = null;
-		}
-	}
+//	@Override
+//	public void surfaceCreated(SurfaceHolder holder) {
+//		if (mCamera != null) {
+//			mCamera.stopPreview();
+//			mCamera.release();
+//		}
+//		Log.i(getString(R.string.app_name), "Opening camera");
+//
+//		mCamera = Camera.open();
+//
+//		// Set the previewSize of the camera by getting supported preview sizes and picking one
+//		Camera.Parameters parameters = mCamera.getParameters();
+//		List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
+//	    Camera.Size max = previewSizes.get(previewSizes.size()-1);
+//		Log.i("Setalyzer","size is " + max.width + "x" + max.height);
+//		parameters.setPreviewSize(max.width, max.height);
+//		
+//	    mCamera.setParameters(parameters);
+//	    
+//	    setCameraDisplayOrientation(this, 0, mCamera);
+//	
+//	    holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+//	    
+//		try {
+//			mCamera.setPreviewDisplay(holder);
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//
+//		Log.i("Setalyzer", "About to startPreview()");
+//		mCamera.startPreview();
+//	}
+//
+//	@Override
+//	public void surfaceDestroyed(SurfaceHolder holder) {
+//		if (mCamera != null) {
+//			mCamera.stopPreview();
+//			mCamera.release();
+//			mCamera = null;
+//		}
+//	}
 	
 	@Override 
 	protected void onPause() {
+		super.onPause();
 	    if (mCamera != null) {
 	      mCamera.release();
-	      mCamera = null;
 	    }
-	    super.onPause();
-	  }
-
-	public void displayImage(ImageUInt8 image) {
-		ImageView iv = (ImageView) findViewById(R.id.resultImageView);
-		Bitmap.Config conf = Bitmap.Config.ARGB_8888;
-		Bitmap bm = Bitmap.createBitmap(image.width, image.height, conf);
-    	byte[] workBuffer = ConvertBitmap.declareStorage(bm, null);
-		ConvertBitmap.grayToBitmap(image, bm, workBuffer);
-		iv.setImageBitmap(bm);
+	    
 	}
 	
+	@Override
+	protected void onResume() {
+		super.onResume();
+		TextureView previewView = (TextureView) findViewById(R.id.fullscreen_content);
+		SurfaceTexture previewSurfaceTexture = previewView.getSurfaceTexture();
+		if (previewSurfaceTexture != null) {
+			initializeCamera(previewSurfaceTexture);
+		}
+	}
+
+	public void displayImage(Bitmap bmp) {
+		String bmpTemporaryFile = Environment.getExternalStorageDirectory().getPath() + "/tmp.setalyzer.bmp";
+		try {
+		       FileOutputStream out = new FileOutputStream(bmpTemporaryFile);
+		       bmp.compress(Bitmap.CompressFormat.PNG, 90, out);
+		} catch (Exception e) {
+		       e.printStackTrace();
+		}
+		Intent intent = new Intent(this, OutputViewerActivity.class);
+		intent.putExtra("bmpTemporaryFile", bmpTemporaryFile);
+		startActivity(intent);
+	}
 }
