@@ -1,7 +1,10 @@
 package com.quimian.setalyzer;
 
+import georegression.struct.line.LineParametric2D_F32;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -19,6 +22,9 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
+import boofcv.android.ConvertBitmap;
+import boofcv.struct.image.ImageSInt16;
+import boofcv.struct.image.ImageUInt8;
 
 import com.quimian.setalyzer.util.SystemUiHider;
 
@@ -76,17 +82,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 			Log.i("Setalyzer", "contentView is null");
 		}
         contentView.setSurfaceTextureListener(this);
-
-//        setContentView(contentView);
-//		contentView.getHolder().addCallback(this);
-//		mCamera = Camera.open();
-//		try {
-//			mCamera.setPreviewDisplay(contentView.getHolder());
-//		} catch (IOException e) {
-//			Log.e(getString(R.string.app_name), "Failed to open camera");
-//		}
-//		mCamera.startPreview();
-		
 		
 		// Set up an instance of SystemUiHider to control the system UI for
 		// this activity.`	
@@ -151,26 +146,34 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		findViewById(R.id.dummy_button).setOnTouchListener(
 				mDelayHideTouchListener);
 		
-		
-		// Setup handlers to grab pictures when they're taken
-//		final PictureCallback rawHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.RAW, this);
-//		final PictureCallback postviewHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.POSTVIEW, this);
-//		final PictureCallback jpegHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.JPEG, this);
-//		final ShutterCallback shutterHandler = new SetalyzerShutterCallback(getApplicationContext());
 
 		Button button = (Button) findViewById(R.id.dummy_button);
 		button.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-//				mCamera.takePicture(shutterHandler, rawHandler, postviewHandler, jpegHandler);
-				Bitmap bmp = contentView.getBitmap();
-				displayImage(bmp);
-				
+				handleClick(v);
 			}
 		});
 		
 	} //end of onCreate
 	
+	public void handleClick(View v) {
+		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
+		Bitmap bmp = contentView.getBitmap();
+		ImageUInt8 image = null;
+		image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
+		if (image == null) {
+			Log.i("Setalyzer", "conversion to ImageUInt8 didn't work!");
+		}
+		LineDetector ld = new LineDetector();
+		List<LineParametric2D_F32> lines = LineDetector.detectLines(image, ImageUInt8.class, ImageSInt16.class);
+		LineDetector.overlayLines(image, lines);
+		if (image == null) {
+			Log.i("Setalyzer", "image is null! ");
+		}
+		bmp = ConvertBitmap.grayToBitmap(image, Bitmap.Config.ARGB_8888);
+		displayImage(bmp);
+	}
 	
 	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
 		initializeCamera(surface);
@@ -250,22 +253,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		mHideHandler.removeCallbacks(mHideRunnable);
 		mHideHandler.postDelayed(mHideRunnable, delayMillis);
 	}
-
-//	@Override
-//	public void surfaceChanged(SurfaceHolder holder, int format, int width,
-//			int height) {
-//		Camera.Parameters parameters = mCamera.getParameters();
-//
-//	    List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
-//	    Camera.Size max = previewSizes.get(0);
-//	    
-//		Log.i("setalyzer","size is " + max.width + "x" + max.height);
-//		parameters.setPreviewSize(max.width, max.height);
-//	    mCamera.setParameters(parameters);
-//	    setCameraDisplayOrientation(this, 0, mCamera);
-//
-//	    mCamera.startPreview();
-//	}
 	
 	// From: http://stackoverflow.com/questions/4645960/how-to-set-android-camera-orientation-properly
 	public static void setCameraDisplayOrientation(Activity activity,
@@ -293,48 +280,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	     Log.i("Setalyzer", "Resulting display orientation is " + result + " degrees");
 	     camera.setDisplayOrientation(result);
 	 }
-
-//	@Override
-//	public void surfaceCreated(SurfaceHolder holder) {
-//		if (mCamera != null) {
-//			mCamera.stopPreview();
-//			mCamera.release();
-//		}
-//		Log.i(getString(R.string.app_name), "Opening camera");
-//
-//		mCamera = Camera.open();
-//
-//		// Set the previewSize of the camera by getting supported preview sizes and picking one
-//		Camera.Parameters parameters = mCamera.getParameters();
-//		List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
-//	    Camera.Size max = previewSizes.get(previewSizes.size()-1);
-//		Log.i("Setalyzer","size is " + max.width + "x" + max.height);
-//		parameters.setPreviewSize(max.width, max.height);
-//		
-//	    mCamera.setParameters(parameters);
-//	    
-//	    setCameraDisplayOrientation(this, 0, mCamera);
-//	
-//	    holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-//	    
-//		try {
-//			mCamera.setPreviewDisplay(holder);
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//
-//		Log.i("Setalyzer", "About to startPreview()");
-//		mCamera.startPreview();
-//	}
-//
-//	@Override
-//	public void surfaceDestroyed(SurfaceHolder holder) {
-//		if (mCamera != null) {
-//			mCamera.stopPreview();
-//			mCamera.release();
-//			mCamera = null;
-//		}
-//	}
 	
 	@Override 
 	protected void onPause() {
@@ -353,6 +298,12 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		if (previewSurfaceTexture != null) {
 			initializeCamera(previewSurfaceTexture);
 		}
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		Log.i("Setalyzer", "onDestroy()");
 	}
 
 	public void displayImage(Bitmap bmp) {

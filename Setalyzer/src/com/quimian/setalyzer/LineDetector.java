@@ -30,7 +30,7 @@ public class LineDetector {
 	 * @param derivType Type of image derivative.
 	 */
 	public static<T extends ImageSingleBand, D extends ImageSingleBand>
-	D detectLines( T image, Class<T> imageType, Class<D> derivType)	{
+	List<LineParametric2D_F32> detectLines( T image, Class<T> imageType, Class<D> derivType)	{
 
 		// Comment/uncomment to try a different type of line detector
 		DetectLineHoughPolar<T,D> detector = FactoryDetectLineAlgs.houghPolar(3, 30, 2, Math.PI / 180,
@@ -48,8 +48,7 @@ public class LineDetector {
 			LineParametric2D_F32 line = found.get(i);
 			Log.i("setalyzer", "p: " + line.p + ", slope: " + line.slope + ", angle: " + line.getAngle());
 		}
-		D derivX = detector.getDerivX();
-		return derivX;
+		return found;
 		
 		// display the results
 		/*ImageLinePanel gui = new ImageLinePanel();
@@ -60,4 +59,14 @@ public class LineDetector {
 		ShowImages.showWindow(gui,"Found Lines");*/
 	}
 
+	public static void overlayLines(ImageUInt8 image, List<LineParametric2D_F32> lines) {
+		for (int i=0; i<lines.size(); i++) {
+			LineParametric2D_F32 line = lines.get(i);
+			for (int t = -50; t < 50; t++) {
+				int x = Math.round(line.getX() + (t * line.getSlopeX()));
+				int y = Math.round(line.getY() + (t * line.getSlopeY()));
+				image.set(x, y, 255);
+			}
+		}
+	}
 }
