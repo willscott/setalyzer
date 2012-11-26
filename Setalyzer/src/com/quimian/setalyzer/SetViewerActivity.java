@@ -1,6 +1,7 @@
 package com.quimian.setalyzer;
 
 import georegression.struct.line.LineParametric2D_F32;
+import georegression.struct.line.LineSegment2D_F32;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Build;
@@ -23,6 +25,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
 import boofcv.android.ConvertBitmap;
+import boofcv.struct.image.ImageFloat32;
 import boofcv.struct.image.ImageSInt16;
 import boofcv.struct.image.ImageUInt8;
 
@@ -158,21 +161,44 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	} //end of onCreate
 	
 	public void handleClick(View v) {
+		
+//		BitmapFactory.Options opts = new BitmapFactory.Options();
+//		opts.inSampleSize = 8;
+//		Bitmap bmp = BitmapFactory.decodeFile(Environment.getExternalStorageDirectory().getPath() + "/setgame1.jpg", opts);
+//		ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null); 
+//		List<LineParametric2D_F32> lines = 
+//				LineDetector.detectLines(image, ImageUInt8.class, ImageSInt16.class);
+//		LineDetector.overlayLines(image, lines);
+//		bmp = ConvertBitmap.grayToBitmap(image, Bitmap.Config.ARGB_8888);
+//		displayImage(bmp);
+		
+		ImageFloat32 segmentsImage = getFloat32FromTextureView();
+		ImageUInt8 linesImage = getUInt8FromTextureView();		
+	
+		List<LineParametric2D_F32> lines = 
+				LineDetector.detectLines(linesImage, ImageUInt8.class, ImageSInt16.class);
+		List<LineSegment2D_F32> segments = 
+				LineDetector.detectLineSegments(segmentsImage, ImageFloat32.class, ImageFloat32.class);
+		LineDetector.overlayLines(linesImage, lines);
+		LineDetector.overlayLineSegments(segmentsImage, segments);
+
+		Bitmap bmp = ConvertBitmap.grayToBitmap(linesImage, Bitmap.Config.ARGB_8888);
+		displayImage(bmp);
+	}
+	
+	public ImageUInt8 getUInt8FromTextureView() {
 		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
 		Bitmap bmp = contentView.getBitmap();
-		ImageUInt8 image = null;
-		image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
-		if (image == null) {
-			Log.i("Setalyzer", "conversion to ImageUInt8 didn't work!");
-		}
-		LineDetector ld = new LineDetector();
-		List<LineParametric2D_F32> lines = LineDetector.detectLines(image, ImageUInt8.class, ImageSInt16.class);
-		LineDetector.overlayLines(image, lines);
-		if (image == null) {
-			Log.i("Setalyzer", "image is null! ");
-		}
-		bmp = ConvertBitmap.grayToBitmap(image, Bitmap.Config.ARGB_8888);
-		displayImage(bmp);
+		ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
+		
+		return image;
+	}
+	public ImageFloat32 getFloat32FromTextureView() {
+		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
+		Bitmap bmp = contentView.getBitmap();
+		ImageFloat32 image = ConvertBitmap.bitmapToGray(bmp, (ImageFloat32)null, null);
+		
+		return image;
 	}
 	
 	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -307,7 +333,7 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	}
 
 	public void displayImage(Bitmap bmp) {
-		String bmpTemporaryFile = Environment.getExternalStorageDirectory().getPath() + "/tmp.setalyzer.bmp";
+		String bmpTemporaryFile = Environment.getExternalStorageDirectory().getPath() + "/tmp.setalyzer.png";
 		try {
 		       FileOutputStream out = new FileOutputStream(bmpTemporaryFile);
 		       bmp.compress(Bitmap.CompressFormat.PNG, 90, out);
