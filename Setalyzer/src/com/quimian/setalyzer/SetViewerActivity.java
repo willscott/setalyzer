@@ -11,7 +11,6 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Build;
@@ -230,6 +229,9 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
 		setCameraDisplayOrientation(this, 0, mCamera);
         // Ignored, Camera does all the work for us
+		mBmp = null;
+		mStorage = null;
+		mImage = null;
     }
 
     public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
@@ -243,16 +245,17 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
     }
 
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
         // Invoked every time there's a new Camera preview frame
+		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
 		if (mBmp == null) {
 			mBmp = contentView.getBitmap();
 //			mBmp = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
+		} else {
+			contentView.getBitmap(mBmp);
 		}
 		if (mStorage == null) {
 			mStorage = ConvertBitmap.declareStorage(mBmp, null);
 		}
-		contentView.getBitmap(mBmp);
 		mImage = ConvertBitmap.bitmapToGray(mBmp, mImage, mStorage);
     }
 	@Override
