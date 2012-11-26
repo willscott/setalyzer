@@ -71,6 +71,15 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	 */
 	private Camera mCamera;
 	
+	/**
+	 * Storage for boof image conversion.
+	 */
+	private byte[] mStorage;
+	
+	private Bitmap mBmp;
+	
+	private ImageUInt8 mImage;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -80,7 +89,7 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
 		final View controlsView = findViewById(R.id.fullscreen_content_controls);
 		final TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		
+	
 		if (contentView == null) {
 			Log.i("Setalyzer", "contentView is null");
 		}
@@ -174,7 +183,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		
 		ImageFloat32 segmentsImage = getFloat32FromTextureView();
 		ImageUInt8 linesImage = getUInt8FromTextureView();		
-	
 		List<LineParametric2D_F32> lines = 
 				LineDetector.detectLines(linesImage, ImageUInt8.class, ImageSInt16.class);
 		List<LineSegment2D_F32> segments = 
@@ -186,13 +194,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		displayImage(bmp);
 	}
 	
-	public ImageUInt8 getUInt8FromTextureView() {
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		Bitmap bmp = contentView.getBitmap();
-		ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
-		
-		return image;
-	}
 	public ImageFloat32 getFloat32FromTextureView() {
 		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
 		Bitmap bmp = contentView.getBitmap();
@@ -200,10 +201,16 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		
 		return image;
 	}
+	public ImageUInt8 getUInt8FromTextureView() {
+		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
+		Bitmap bmp = contentView.getBitmap();
+		ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
+		
+		return image;
+	}
 	
 	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
 		initializeCamera(surface);
-        
     }
 
     private void initializeCamera(SurfaceTexture surface) {
@@ -212,6 +219,7 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
         try {
             mCamera.setPreviewTexture(surface);
+    		setCameraDisplayOrientation(this, 0, mCamera);
             mCamera.startPreview();
         } catch (IOException ioe) {
             // Something bad happened
@@ -220,6 +228,7 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
 
 	public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+		setCameraDisplayOrientation(this, 0, mCamera);
         // Ignored, Camera does all the work for us
     }
 
@@ -235,6 +244,16 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         // Invoked every time there's a new Camera preview frame
+		if (mBmp == null) {
+			mBmp = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
+		}
+		if (mStorage == null) {
+			mStorage = ConvertBitmap.declareStorage(mBmp, null);
+		}
+		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
+		contentView.getBitmap(mBmp);
+		
+		mImage = ConvertBitmap.bitmapToGray(mBmp, mImage, mStorage);
     }
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
@@ -312,6 +331,15 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		super.onPause();
 	    if (mCamera != null) {
 	      mCamera.release();
+	      mCamera = null;
+	    }
+	    
+	}
+	@Override 
+	protected void onDestroy() {
+		super.onPause();
+	    if (mCamera != null) {
+	      mCamera.release();
 	    }
 	    
 	}
@@ -324,12 +352,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		if (previewSurfaceTexture != null) {
 			initializeCamera(previewSurfaceTexture);
 		}
-	}
-	
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-		Log.i("Setalyzer", "onDestroy()");
 	}
 
 	public void displayImage(Bitmap bmp) {
