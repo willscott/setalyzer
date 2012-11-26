@@ -3,11 +3,20 @@ package com.quimian.setalyzer;
 import java.io.IOException;
 import java.util.List;
 
+import boofcv.android.ConvertBitmap;
+import boofcv.struct.image.ImageUInt8;
+
 import com.quimian.setalyzer.util.SystemUiHider;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
+import android.graphics.PixelFormat;
 import android.hardware.Camera;
+import android.hardware.Camera.PictureCallback;
+import android.hardware.Camera.ShutterCallback;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -18,6 +27,8 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -61,8 +72,11 @@ public class SetViewerActivity extends Activity implements Callback {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		Log.i(getString(R.string.app_name), "onCreate");
+
 		super.onCreate(savedInstanceState);
 
+		Log.i(getString(R.string.app_name), "YO");
 		setContentView(R.layout.activity_set_viewer);
 
 		final View controlsView = findViewById(R.id.fullscreen_content_controls);
@@ -79,7 +93,7 @@ public class SetViewerActivity extends Activity implements Callback {
 		
 		
 		// Set up an instance of SystemUiHider to control the system UI for
-		// this activity.
+		// this activity.`	
 		mSystemUiHider = SystemUiHider.getInstance(this, contentView,
 				HIDER_FLAGS);
 		mSystemUiHider.setup();
@@ -140,8 +154,23 @@ public class SetViewerActivity extends Activity implements Callback {
 		// while interacting with the UI.
 		findViewById(R.id.dummy_button).setOnTouchListener(
 				mDelayHideTouchListener);
-	}
+		
+		
+		// Setup handlers to grab pictures when they're taken
+		final PictureCallback rawHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.RAW, this);
+		final PictureCallback postviewHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.POSTVIEW, this);
+		final PictureCallback jpegHandler = new SetalyzerImageCapture(getApplicationContext(), SetalyzerImageCapture.JPEG, this);
+		final ShutterCallback shutterHandler = new SetalyzerShutterCallback(getApplicationContext());
 
+		Button button = (Button) findViewById(R.id.dummy_button);
+		button.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				mCamera.takePicture(shutterHandler, rawHandler, postviewHandler, jpegHandler);
+			}
+		});
+	} //end of onCreate
+	
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
@@ -149,6 +178,8 @@ public class SetViewerActivity extends Activity implements Callback {
 		// Trigger the initial hide() shortly after the activity has been
 		// created, to briefly hint to the user that UI controls
 		// are available.
+		Log.i(getString(R.string.app_name), "hiding");
+
 		delayedHide(100);
 	}
 
@@ -223,6 +254,7 @@ public class SetViewerActivity extends Activity implements Callback {
 	     } else {  // back-facing
 	         result = (info.orientation - degrees + 360) % 360;
 	     }
+	     Log.i("Setalyzer", "Resulting display orientation is " + result + " degrees");
 	     camera.setDisplayOrientation(result);
 	 }
 
@@ -232,14 +264,30 @@ public class SetViewerActivity extends Activity implements Callback {
 			mCamera.stopPreview();
 			mCamera.release();
 		}
+		Log.i(getString(R.string.app_name), "Opening camera");
+
 		mCamera = Camera.open();
-			
+
+		// Set the previewSize of the camera by getting supported preview sizes and picking one
+		Camera.Parameters parameters = mCamera.getParameters();
+		List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
+	    Camera.Size max = previewSizes.get(previewSizes.size()-1);
+		Log.i("Setalyzer","size is " + max.width + "x" + max.height);
+		parameters.setPreviewSize(max.width, max.height);
+		
+	    mCamera.setParameters(parameters);
+	    
+	    setCameraDisplayOrientation(this, 0, mCamera);
+	
+	    holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+	    
 		try {
 			mCamera.setPreviewDisplay(holder);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
+		Log.i("Setalyzer", "About to startPreview()");
 		mCamera.startPreview();
 	}
 
@@ -251,4 +299,23 @@ public class SetViewerActivity extends Activity implements Callback {
 			mCamera = null;
 		}
 	}
+	
+	@Override 
+	protected void onPause() {
+	    if (mCamera != null) {
+	      mCamera.release();
+	      mCamera = null;
+	    }
+	    super.onPause();
+	  }
+
+	public void displayImage(ImageUInt8 image) {
+		ImageView iv = (ImageView) findViewById(R.id.resultImageView);
+		Bitmap.Config conf = Bitmap.Config.ARGB_8888;
+		Bitmap bm = Bitmap.createBitmap(image.width, image.height, conf);
+    	byte[] workBuffer = ConvertBitmap.declareStorage(bm, null);
+		ConvertBitmap.grayToBitmap(image, bm, workBuffer);
+		iv.setImageBitmap(bm);
+	}
+	
 }
