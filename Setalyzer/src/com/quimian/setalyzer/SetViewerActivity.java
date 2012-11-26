@@ -165,7 +165,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		if (image == null) {
 			Log.i("Setalyzer", "conversion to ImageUInt8 didn't work!");
 		}
-		LineDetector ld = new LineDetector();
 		List<LineParametric2D_F32> lines = LineDetector.detectLines(image, ImageUInt8.class, ImageSInt16.class);
 		LineDetector.overlayLines(image, lines);
 		if (image == null) {
@@ -186,6 +185,7 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
         try {
             mCamera.setPreviewTexture(surface);
+    		setCameraDisplayOrientation(this, 0, mCamera);
             mCamera.startPreview();
         } catch (IOException ioe) {
             // Something bad happened
@@ -194,6 +194,7 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
 
 	public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+		setCameraDisplayOrientation(this, 0, mCamera);
         // Ignored, Camera does all the work for us
     }
 
