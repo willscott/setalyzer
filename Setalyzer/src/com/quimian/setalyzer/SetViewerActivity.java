@@ -243,16 +243,16 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
     }
 
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
         // Invoked every time there's a new Camera preview frame
 		if (mBmp == null) {
-			mBmp = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
+			mBmp = contentView.getBitmap();
+//			mBmp = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
 		}
 		if (mStorage == null) {
 			mStorage = ConvertBitmap.declareStorage(mBmp, null);
 		}
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
 		contentView.getBitmap(mBmp);
-		
 		mImage = ConvertBitmap.bitmapToGray(mBmp, mImage, mStorage);
     }
 	@Override
