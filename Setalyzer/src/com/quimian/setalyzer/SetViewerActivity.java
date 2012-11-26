@@ -68,6 +68,13 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	 */
 	private Camera mCamera;
 	
+	/**
+	 * Storage for boof image conversion.
+	 */
+	private byte[] mStorage;
+	
+	private ImageUInt8 mImage;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -77,7 +84,7 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
 		final View controlsView = findViewById(R.id.fullscreen_content_controls);
 		final TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		
+	
 		if (contentView == null) {
 			Log.i("Setalyzer", "contentView is null");
 		}
@@ -176,7 +183,6 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	
 	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
 		initializeCamera(surface);
-        
     }
 
     private void initializeCamera(SurfaceTexture surface) {
@@ -210,6 +216,13 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         // Invoked every time there's a new Camera preview frame
+		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
+		Bitmap bmp = contentView.getBitmap(320, 240);
+		if (mStorage == null) {
+			mStorage = ConvertBitmap.declareStorage(bmp, null);
+		}
+		
+		mImage = ConvertBitmap.bitmapToGray(bmp, mImage, mStorage);
     }
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
