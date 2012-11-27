@@ -5,14 +5,19 @@ import georegression.struct.line.LineSegment2D_F32;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Rect;
+import android.graphics.Region;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
+import android.hardware.Camera.Size;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -29,6 +34,7 @@ import boofcv.struct.image.FactoryImage;
 import boofcv.struct.image.ImageSInt16;
 import boofcv.struct.image.ImageUInt8;
 
+import com.quimian.setalyzer.util.SetCard;
 import com.quimian.setalyzer.util.SystemUiHider;
 
 /**
@@ -181,15 +187,50 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 //		displayImage(bmp);
 		
 		ImageUInt8 linesImage = mImage.clone();		
-		List<LineParametric2D_F32> lines = 
-				LineDetector.detectLines(linesImage, ImageUInt8.class, ImageSInt16.class);
-//		List<LineSegment2D_F32> segments = 
-//				LineDetector.detectLineSegments(segmentsImage, ImageFloat32.class, ImageFloat32.class);
-		LineDetector.overlayLines(linesImage, lines);
-//		LineDetector.overlayLineSegments(segmentsImage, segments);
 
+		// Segment.
+		List<Region> cards = Segmenter.segment(linesImage);
+		
+		// Classify.
+		List<SetCard> setCards = new ArrayList<SetCard>();
+		for(Region card: cards) {
+			CardClassifier cc = new CardClassifier(linesImage, card);
+			setCards.add(cc.getCard());
+		}
+		
+		// Solve.
+		List<List<SetCard>> sets = SetFinder.findSets(setCards);
+		
+		// Display.
 		Bitmap bmp = ConvertBitmap.grayToBitmap(linesImage, Bitmap.Config.ARGB_8888);
+		
+		for(int i = 0; i < sets.size(); i++) {
+			drawSet(bmp, sets.get(i), i, sets.size());
+		}
+		
 		displayImage(bmp);
+	}
+	
+	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
+		int StripeWidth = 80;
+		int[] colors = new int[] {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.CYAN};
+		double sd = count;
+
+		for (SetCard card : set) {
+			Rect bounds = card.location.getBounds();
+			for(int d = 0; d < bounds.width() + bounds.height(); d++) {
+				double stripePos = (d % StripeWidth)/sd;
+				if (stripePos > (idx/sd) && stripePos < ((idx+1)/sd)) {
+					for (int p = 0; p < bounds.width(); p++) {
+						int x = bounds.left + p;
+						int y = bounds.top + d - p;
+						if(card.location.contains(x, y)) {
+							image.setPixel(x, y, colors[idx]);
+						}
+					}
+				}
+			}
+		}
 	}
 		
 	private byte[] allocateBuffer() {

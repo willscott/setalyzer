@@ -1,17 +1,14 @@
 package com.quimian.setalyzer;
 
-import georegression.struct.point.Point2D_F64;
-
-import java.util.List;
+import android.graphics.Region;
+import boofcv.struct.image.ImageUInt8;
 
 import com.quimian.setalyzer.util.SetCard;
-
-import android.graphics.Bitmap;
 
 public class CardClassifier {
 	SetCard sc = new SetCard();
 
-	CardClassifier(Bitmap image, List<Point2D_F64> regionOfInterest) {
+	public CardClassifier(ImageUInt8 linesImage, Region card) {
 		sc.color = SetCard.Color.RED;
 		sc.count = 1;
 		sc.shade = SetCard.Shade.EMPTY;
