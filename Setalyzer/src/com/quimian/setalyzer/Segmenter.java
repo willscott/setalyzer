@@ -82,7 +82,7 @@ public class Segmenter {
 	private double sum;
 
 	private Segmenter(ImageUInt8 image) {
-		int sampleWidth = 100;
+		int sampleWidth = 300;
 
 		double scale = sampleWidth / (1.0 * image.getWidth());
 		int sampleHeight = (int)(image.getHeight() * scale);
@@ -94,6 +94,7 @@ public class Segmenter {
 				sample.set(x, y, value);
 			}
 		}
+		
 		this.sample = sample;
 	}
 	
