@@ -1,6 +1,7 @@
 package com.quimian.setalyzer;
 
 import georegression.struct.point.Point2D_F64;
+import georegression.struct.point.Point2D_I32;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,20 +16,30 @@ import android.util.Log;
 
 public class Segmenter {
 	public static ImageUInt8 test;
+	
+	private final static int cannyContourMinimumSize = 20; 
 
 	public static List<Region> segment(ImageUInt8 image) {
-		ArrayList<Region> list = new ArrayList<Region>();
+		ArrayList<Region> thresholdRegionList = new ArrayList<Region>();
+		ArrayList<Region> cannyRegionList = new ArrayList<Region>();
 
-		// Downsample
+		// Downsample and determine mean pixel value to use as threshold
+		// Do we want to do this over subimages to deal with different lighting?
 		Segmenter s = new Segmenter(image);
 		double threshold = s.getMean();
 		Log.i("Setalyzer", "THreshold value is " + threshold);
+		// Blur
 		ImageUInt8 blurred = boofcv.alg.filter.blur.BlurImageOps.mean(image, null, 5, null);
+		// Threshold to generate binary image
 		ImageUInt8 binary = boofcv.alg.filter.binary.ThresholdImageOps.threshold(blurred, null, (int)threshold, false);
 		
+		// Canny to get contours
+		List<List<Point2D_I32>> cannyContours = LineDetector.cannyEdgeDetect(blurred);
+		
+		// We may want to dialate the image before labeling its blobs?
+		// Label blobs in out
 		ImageSInt32 out = FactoryImage.create(ImageSInt32.class, image.getWidth(), image.getHeight());
-		int numBlobs = 
-				boofcv.alg.filter.binary.BinaryImageOps.labelBlobs4(binary, out);
+		int numBlobs = boofcv.alg.filter.binary.BinaryImageOps.labelBlobs4(binary, out);
 		Log.i("Setalyzer", "Blobs found:" + numBlobs);
 		//Segmenter.test = out;
 		//for (int i = 0; i < binary.data.length; i++) {
@@ -38,6 +49,7 @@ public class Segmenter {
 		//}
 		//Segmenter.test = binary;
 
+		
 		@SuppressWarnings("unchecked")
 		List<Point2D_F64>[] points = new ArrayList[numBlobs];
 		for (int i = 1; i < numBlobs; i++) {
@@ -50,6 +62,7 @@ public class Segmenter {
 					}
 				}
 			}
+			// Transform blobs into quadrilaterals, ignoring blobs of very small size
 			if (inClass.size() > 10) {
 				points[i] = boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(inClass);
 			} else {
@@ -57,25 +70,57 @@ public class Segmenter {
 			}
 		}
 		
-		// Convert bounding quads into regions.
-		for (List<Point2D_F64> quad : points) {
-			if (quad == null)
+		// Generate quads for canny edges
+		List<List<Point2D_F64>> cannyQuads = new ArrayList<List<Point2D_F64>>();
+		for (int i = 0; i< cannyContours.size(); i++) {
+			List<Point2D_I32> contour = cannyContours.get(i);
+			if (contour.size() < cannyContourMinimumSize) {
 				continue;
-			Region r = new Region();
-			Path p = null;
-			for (Point2D_F64 po : quad) {
-				if (p == null) {
-					p = new Path();
-					p.moveTo((float)po.x, (float)po.y);
-				} else
-					p.lineTo((float)po.x, (float)po.y);
 			}
-			p.close();
-			r.setPath(p, new Region(0, 0, image.getWidth(), image.getHeight()));
-			list.add(r);
+			List<Point2D_F64> f64Contour = new ArrayList<Point2D_F64>();
+			for (Point2D_I32 point: contour) {
+				f64Contour.add(new Point2D_F64(point.x, point.y));
+			}
+			Log.i("Setalyzer", f64Contour.toString());
+			cannyQuads.add(boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(f64Contour));
 		}
 		
-		return list;
+		
+		
+		// Convert bounding quads into regions.
+		for (List<Point2D_F64> quad : points) {
+			if (quad == null) {
+				continue;
+			}
+			thresholdRegionList.add(convertQuadToRegion(quad, image.getWidth(), image.getHeight()));
+		}
+		for (List<Point2D_F64> quad: cannyQuads) {
+			if (quad == null) {
+				continue;
+			}
+			cannyRegionList.add(convertQuadToRegion(quad, image.getWidth(), image.getHeight()));
+		}
+		
+		
+		return thresholdRegionList;
+//		return cannyRegionList;
+	}
+	
+	private static Region convertQuadToRegion(List<Point2D_F64> quad, int width, int height) {
+		if (quad == null)
+			return null;
+		Region r = new Region();
+		Path p = null;
+		for (Point2D_F64 po : quad) {
+			if (p == null) {
+				p = new Path();
+				p.moveTo((float)po.x, (float)po.y);
+			} else
+				p.lineTo((float)po.x, (float)po.y);
+		}
+		p.close();
+		r.setPath(p, new Region(0, 0, width, height));
+		return r;
 	}
 
 	private ImageUInt8 sample;

@@ -94,16 +94,12 @@ public class LineDetector {
 		double mean = GPixelMath.sum(gray)/(gray.width*gray.height);
 		DetectEdgeContour<ImageUInt8> simple = FactoryDetectEdgeContour.binarySimple(mean,true);
  
-		// Blur
-		ImageUInt8 blurred = GeneralizedImageOps.createSingleBand(ImageUInt8.class, gray.width, gray.height);
-		GBlurImageOps.gaussian(gray, blurred, -1, blurRadius, null);
-		
 		// Which is why there is the dynamic option, which sets the threshold as a function of
 		// the image's edge intensity
 		DetectEdgeContour<ImageUInt8> cannyD =
 				FactoryDetectEdgeContour.canny(0.05, 0.15, true, ImageUInt8.class, ImageSInt16.class);
  
-		cannyD.process(blurred);
+		cannyD.process(gray);
 		List<List<Point2D_I32>> contours = cannyD.getContours();
 		return contours;
 	}
