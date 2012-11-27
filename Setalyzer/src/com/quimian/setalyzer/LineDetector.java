@@ -2,24 +2,32 @@ package com.quimian.setalyzer;
 
 import georegression.struct.line.LineParametric2D_F32;
 import georegression.struct.line.LineSegment2D_F32;
+import georegression.struct.point.Point2D_I32;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import android.widget.ImageView;
 import android.util.Log;
+import boofcv.abst.feature.detect.edge.DetectEdgeContour;
 import boofcv.abst.feature.detect.line.DetectLineHoughFoot;
 import boofcv.abst.feature.detect.line.DetectLineHoughFootSubimage;
 import boofcv.abst.feature.detect.line.DetectLineHoughPolar;
 import boofcv.abst.feature.detect.line.DetectLineSegmentsGridRansac;
 import boofcv.alg.filter.blur.GBlurImageOps;
+import boofcv.alg.misc.GPixelMath;
 import boofcv.core.image.ConvertBufferedImage;
 import boofcv.core.image.GeneralizedImageOps;
+import boofcv.factory.feature.detect.edge.FactoryDetectEdgeContour;
 import boofcv.factory.feature.detect.line.FactoryDetectLineAlgs;
 import boofcv.gui.feature.ImageLinePanel;
 import boofcv.gui.image.ShowImages;
 import boofcv.struct.image.ImageFloat32;
+import boofcv.struct.image.ImageSInt16;
 import boofcv.struct.image.ImageSingleBand;
 import boofcv.struct.image.ImageUInt8;
+import boofcv.struct.image.MultiSpectral;
 
 
 public class LineDetector {
@@ -29,7 +37,7 @@ public class LineDetector {
 	private static final int maxLines = 20;  // 0 -> all
 
 	// adjust the blur radius to be applied before line finding
-	private static final int blurRadius = 7;
+	private static final int blurRadius = 5;
 	
 	/**
 	 * Detects lines inside the image using different types of Hough detectors
@@ -79,6 +87,27 @@ public class LineDetector {
 		return found;
 	}
 
+	
+	public static List<List<Point2D_I32>> cannyEdgeDetect(ImageUInt8 gray) {
+ 
+		// In many situations the mean pixel value produces reasonable results as a threshold
+		double mean = GPixelMath.sum(gray)/(gray.width*gray.height);
+		DetectEdgeContour<ImageUInt8> simple = FactoryDetectEdgeContour.binarySimple(mean,true);
+ 
+		// Blur
+		ImageUInt8 blurred = GeneralizedImageOps.createSingleBand(ImageUInt8.class, gray.width, gray.height);
+		GBlurImageOps.gaussian(gray, blurred, -1, blurRadius, null);
+		
+		// Which is why there is the dynamic option, which sets the threshold as a function of
+		// the image's edge intensity
+		DetectEdgeContour<ImageUInt8> cannyD =
+				FactoryDetectEdgeContour.canny(0.05, 0.15, true, ImageUInt8.class, ImageSInt16.class);
+ 
+		cannyD.process(blurred);
+		List<List<Point2D_I32>> contours = cannyD.getContours();
+		return contours;
+	}
+	
 	public static void overlayLines(ImageUInt8 image, List<LineParametric2D_F32> lines) {
 		for (int i=0; i<lines.size(); i++) {
 			LineParametric2D_F32 line = lines.get(i);
@@ -113,5 +142,35 @@ public class LineDetector {
 				t++;
 			}
 		}
+	}
+	
+	public static void overlayContours(MultiSpectral<ImageUInt8> image, List<List<Point2D_I32>> contours) {
+		Log.i("Setalyzer", "overlaying " + contours.size() + "contours");
+		String s = "";
+		for (int i=0; i<contours.size(); i++) {
+			s += contours.get(i).size() + ",";
+		}
+		Log.i("Setalyzer", s);
+		
+		Iterator<List<Point2D_I32>> contourIter = contours.iterator();
+		while (contourIter.hasNext()) {
+			List<Point2D_I32> contour = contourIter.next();
+			Iterator<Point2D_I32> pointIter = contour.iterator();
+			int[] color = randomColor();
+			if (contour.size() > 35) {
+				while (pointIter.hasNext()) {
+					Point2D_I32 p = pointIter.next();
+					image.getBand(0).set(p.x, p.y, color[0]);
+					image.getBand(1).set(p.x, p.y, color[1]);
+					image.getBand(2).set(p.x, p.y, color[2]);
+				}
+			}
+		}
+	}
+	
+	public static int[] randomColor() {
+		Random generator = new Random();
+		int[] color = {generator.nextInt(256), generator.nextInt(256), generator.nextInt(256)};
+		return color;
 	}
 }
