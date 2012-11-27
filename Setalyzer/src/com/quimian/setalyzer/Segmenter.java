@@ -50,8 +50,7 @@ public class Segmenter {
 					}
 				}
 			}
-			Log.i("Setalyzer", "Found " + inClass.size() + " points in class " + i);
-			if (inClass.size() > 4) {
+			if (inClass.size() > 10) {
 				points[i] = boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(inClass);
 			} else {
 				points[i] = null;

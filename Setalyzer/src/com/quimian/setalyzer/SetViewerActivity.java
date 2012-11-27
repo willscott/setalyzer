@@ -14,6 +14,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.LightingColorFilter;
 import android.graphics.Rect;
 import android.graphics.Region;
 import android.hardware.Camera;
@@ -194,17 +196,25 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 		
 		// Classify.
 		List<SetCard> setCards = new ArrayList<SetCard>();
+		//TODO(willscott): confidence.
 		for(Region card: cards) {
 			CardClassifier cc = new CardClassifier(linesImage, card);
 			setCards.add(cc.getCard());
 		}
-		
+		if (setCards.size() > 15) {
+			setCards = setCards.subList(0, 15);
+		}
+		Log.i("Setalyzer", "Cards detected: " + setCards.size());
 		// Solve.
 		List<List<SetCard>> sets = SetFinder.findSets(setCards);
 		
 		// Display.
 		Bitmap bmp = ConvertBitmap.grayToBitmap(linesImage, Bitmap.Config.ARGB_8888);
 		
+		Log.i("Setalyzer", "Sets found: " + sets.size());
+		if (sets.size() > 7) {
+			sets = sets.subList(0, 7);
+		}
 		for(int i = 0; i < sets.size(); i++) {
 			drawSet(bmp, sets.get(i), i, sets.size());
 		}
@@ -215,8 +225,8 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 	}
 	
 	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
-		int StripeWidth = 80;
-		int[] colors = new int[] {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.CYAN};
+		int reps = 3;
+		int[] colors = new int[] {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.CYAN, Color.LTGRAY};
 		double sd = count;
 
 		for (SetCard card : set) {
@@ -224,8 +234,9 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 				continue;
 			Rect bounds = card.location.getBounds();
 			for(int d = 0; d < bounds.width() + bounds.height(); d++) {
-				double stripePos = (d % StripeWidth)/sd;
-				if (stripePos > (idx/sd) && stripePos < ((idx+1)/sd)) {
+				double stripePos = ((d / (1.0 * (bounds.width() + bounds.height()))) * reps);
+				stripePos -= Math.floor(stripePos);
+				if (stripePos > (idx/(sd * 1.0)) && stripePos < ((idx+1)/(sd * 1.0))) {
 					for (int p = 0; p < bounds.width(); p++) {
 						int x = bounds.left + p;
 						int y = bounds.top + d - p;

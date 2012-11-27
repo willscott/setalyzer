@@ -9,6 +9,7 @@ public class CardClassifier {
 	SetCard sc = new SetCard();
 
 	public CardClassifier(ImageUInt8 linesImage, Region card) {
+		sc.location = card;
 		sc.color = SetCard.Color.RED;
 		sc.count = 1;
 		sc.shade = SetCard.Shade.EMPTY;
