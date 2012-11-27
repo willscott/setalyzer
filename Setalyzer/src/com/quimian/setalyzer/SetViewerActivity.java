@@ -12,6 +12,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Region;
@@ -207,7 +208,9 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 		for(int i = 0; i < sets.size(); i++) {
 			drawSet(bmp, sets.get(i), i, sets.size());
 		}
-		
+
+		//Bitmap bmp = ConvertBitmap.grayToBitmap(Segmenter.test, Bitmap.Config.ARGB_8888);		
+		//Bitmap bmp = Bitmap.createBitmap(Segmenter.test.data, Segmenter.test.getWidth(), Segmenter.test.getHeight(), Bitmap.Config.ARGB_8888);
 		displayImage(bmp);
 	}
 	
@@ -217,6 +220,8 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 		double sd = count;
 
 		for (SetCard card : set) {
+			if(card == null || card.location == null)
+				continue;
 			Rect bounds = card.location.getBounds();
 			for(int d = 0; d < bounds.width() + bounds.height(); d++) {
 				double stripePos = (d % StripeWidth)/sd;
