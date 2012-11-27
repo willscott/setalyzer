@@ -5,14 +5,22 @@ import georegression.struct.line.LineSegment2D_F32;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.SurfaceTexture;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.LightingColorFilter;
+import android.graphics.Rect;
+import android.graphics.Region;
 import android.hardware.Camera;
+import android.hardware.Camera.PreviewCallback;
+import android.hardware.Camera.Size;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -20,14 +28,16 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
-import android.view.TextureView;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import boofcv.android.ConvertBitmap;
-import boofcv.struct.image.ImageFloat32;
+import boofcv.struct.image.FactoryImage;
 import boofcv.struct.image.ImageSInt16;
 import boofcv.struct.image.ImageUInt8;
 
+import com.quimian.setalyzer.util.SetCard;
 import com.quimian.setalyzer.util.SystemUiHider;
 
 /**
@@ -36,7 +46,7 @@ import com.quimian.setalyzer.util.SystemUiHider;
  * 
  * @see SystemUiHider
  */
-public class SetViewerActivity extends Activity implements TextureView.SurfaceTextureListener {
+public class SetViewerActivity extends Activity implements SurfaceHolder.Callback, PreviewCallback {
 	/**
 	 * Whether or not the system UI should be auto-hidden after
 	 * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
@@ -73,11 +83,9 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	/**
 	 * Storage for boof image conversion.
 	 */
-	private byte[] mStorage;
-	
-	private Bitmap mBmp;
-	
 	private ImageUInt8 mImage;
+	
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -87,12 +95,13 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		setContentView(R.layout.activity_set_viewer);
 
 		final View controlsView = findViewById(R.id.fullscreen_content_controls);
-		final TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
+		final SurfaceView contentView = (SurfaceView) findViewById(R.id.fullscreen_content);
 	
 		if (contentView == null) {
 			Log.i("Setalyzer", "contentView is null");
 		}
-        contentView.setSurfaceTextureListener(this);
+		SurfaceHolder holder = contentView.getHolder();
+		holder.addCallback(this);
 		
 		// Set up an instance of SystemUiHider to control the system UI for
 		// this activity.`	
@@ -180,44 +189,89 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 //		bmp = ConvertBitmap.grayToBitmap(image, Bitmap.Config.ARGB_8888);
 //		displayImage(bmp);
 		
-		ImageFloat32 segmentsImage = getFloat32FromTextureView();
-		ImageUInt8 linesImage = getUInt8FromTextureView();		
-		List<LineParametric2D_F32> lines = 
-				LineDetector.detectLines(linesImage, ImageUInt8.class, ImageSInt16.class);
-		List<LineSegment2D_F32> segments = 
-				LineDetector.detectLineSegments(segmentsImage, ImageFloat32.class, ImageFloat32.class);
-		LineDetector.overlayLines(linesImage, lines);
-		LineDetector.overlayLineSegments(segmentsImage, segments);
+		ImageUInt8 linesImage = mImage.clone();		
 
+		// Segment.
+		List<Region> cards = Segmenter.segment(linesImage);
+		
+		// Classify.
+		List<SetCard> setCards = new ArrayList<SetCard>();
+		//TODO(willscott): confidence.
+		for(Region card: cards) {
+			CardClassifier cc = new CardClassifier(linesImage, card);
+			setCards.add(cc.getCard());
+		}
+		if (setCards.size() > 15) {
+			setCards = setCards.subList(0, 15);
+		}
+		Log.i("Setalyzer", "Cards detected: " + setCards.size());
+		// Solve.
+		List<List<SetCard>> sets = SetFinder.findSets(setCards);
+		
+		// Display.
 		Bitmap bmp = ConvertBitmap.grayToBitmap(linesImage, Bitmap.Config.ARGB_8888);
+		
+		Log.i("Setalyzer", "Sets found: " + sets.size());
+		if (sets.size() > 7) {
+			sets = sets.subList(0, 7);
+		}
+		for(int i = 0; i < sets.size(); i++) {
+			drawSet(bmp, sets.get(i), i, sets.size());
+		}
+
+		//Bitmap bmp = ConvertBitmap.grayToBitmap(Segmenter.test, Bitmap.Config.ARGB_8888);		
+		//Bitmap bmp = Bitmap.createBitmap(Segmenter.test.data, Segmenter.test.getWidth(), Segmenter.test.getHeight(), Bitmap.Config.ARGB_8888);
 		displayImage(bmp);
 	}
 	
-	public ImageFloat32 getFloat32FromTextureView() {
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		Bitmap bmp = contentView.getBitmap();
-		ImageFloat32 image = ConvertBitmap.bitmapToGray(bmp, (ImageFloat32)null, null);
-		
-		return image;
+	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
+		int reps = 3;
+		int[] colors = new int[] {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.CYAN, Color.LTGRAY};
+		double sd = count;
+
+		for (SetCard card : set) {
+			if(card == null || card.location == null)
+				continue;
+			Rect bounds = card.location.getBounds();
+			for(int d = 0; d < bounds.width() + bounds.height(); d++) {
+				double stripePos = ((d / (1.0 * (bounds.width() + bounds.height()))) * reps);
+				stripePos -= Math.floor(stripePos);
+				if (stripePos > (idx/(sd * 1.0)) && stripePos < ((idx+1)/(sd * 1.0))) {
+					for (int p = 0; p < bounds.width(); p++) {
+						int x = bounds.left + p;
+						int y = bounds.top + d - p;
+						if(card.location.contains(x, y)) {
+							image.setPixel(x, y, colors[idx]);
+						}
+					}
+				}
+			}
+		}
 	}
-	public ImageUInt8 getUInt8FromTextureView() {
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		Bitmap bmp = contentView.getBitmap();
-		ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
 		
-		return image;
+	private byte[] allocateBuffer() {
+		Camera.Size psize = mCamera.getParameters().getPreviewSize();
+		int depth = android.graphics.ImageFormat.getBitsPerPixel(mCamera.getParameters().getPreviewFormat());
+		int size = psize.width * psize.height * depth / 8;
+		return new byte[size];
 	}
 	
-	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-		initializeCamera(surface);
-    }
+    private void initializeCamera(SurfaceHolder holder) {
+    	if (holder == null || holder.getSurface() == null)  {
+    		return;
+    	}
 
-    private void initializeCamera(SurfaceTexture surface) {
+    	if (mCamera != null) {
+    		surfaceDestroyed(holder);
+    	}
+
     	Log.i("Setalyzer", "initializeCamera");
     	mCamera = Camera.open();
 
         try {
-            mCamera.setPreviewTexture(surface);
+        	mCamera.setPreviewDisplay(holder);
+        	mCamera.setPreviewCallbackWithBuffer(this);
+        	mCamera.addCallbackBuffer(allocateBuffer());
     		setCameraDisplayOrientation(this, 0, mCamera);
             mCamera.startPreview();
         } catch (IOException ioe) {
@@ -225,40 +279,47 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
         }		
 	}
 
-
-	public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+    @Override
+	public void surfaceChanged(SurfaceHolder holder, int format, int width,
+			int height) {
 		setCameraDisplayOrientation(this, 0, mCamera);
-        // Ignored, Camera does all the work for us
-		mBmp = null;
-		mStorage = null;
-		mImage = null;
-    }
 
-    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+		mImage = null;
+	}
+
+	@Override
+	public void surfaceCreated(SurfaceHolder holder) {
+		initializeCamera(holder);
+	}
+
+	@Override
+	public void surfaceDestroyed(SurfaceHolder holder) {
         if (mCamera != null) {
         	mCamera.stopPreview();
         	mCamera.setPreviewCallback(null);
         	mCamera.release();
         	mCamera = null;
         }
-        return true;
-    }
+	}
 
-    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        // Invoked every time there's a new Camera preview frame
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		if (mBmp == null) {
-			mBmp = contentView.getBitmap();
-//			mBmp = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
-		} else {
-			contentView.getBitmap(mBmp);
-		}
-		if (mStorage == null) {
-			mStorage = ConvertBitmap.declareStorage(mBmp, null);
-		}
-		mImage = ConvertBitmap.bitmapToGray(mBmp, mImage, mStorage);
-    }
 	@Override
+	public void onPreviewFrame(byte[] data, Camera camera) {
+		if (mCamera == null || camera == null) {
+			return;
+		}
+		Camera.Size psize = camera.getParameters().getPreviewSize();
+		if (mImage == null) {
+			mImage = FactoryImage.create(ImageUInt8.class, psize.width, psize.height);
+		}
+
+		// Yeah YUV!
+		// Reference on why this is okay: http://stackoverflow.com/questions/5272388/need-help-with-androids-nv21-format
+		System.arraycopy(data, 0, mImage.data, 0, mImage.data.length);
+
+		camera.addCallbackBuffer(data);
+	}
+	
+    @Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 
@@ -350,10 +411,9 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	@Override
 	protected void onResume() {
 		super.onResume();
-		TextureView previewView = (TextureView) findViewById(R.id.fullscreen_content);
-		SurfaceTexture previewSurfaceTexture = previewView.getSurfaceTexture();
-		if (previewSurfaceTexture != null) {
-			initializeCamera(previewSurfaceTexture);
+		SurfaceView preview = (SurfaceView) findViewById(R.id.fullscreen_content);
+		if (preview != null && preview.getHolder() != null) {
+			initializeCamera(preview.getHolder());
 		}
 	}
 
