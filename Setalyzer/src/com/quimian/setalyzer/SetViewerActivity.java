@@ -11,8 +11,8 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.hardware.Camera.PreviewCallback;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -20,11 +20,12 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
-import android.view.TextureView;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import boofcv.android.ConvertBitmap;
-import boofcv.struct.image.ImageFloat32;
+import boofcv.struct.image.FactoryImage;
 import boofcv.struct.image.ImageSInt16;
 import boofcv.struct.image.ImageUInt8;
 
@@ -36,7 +37,7 @@ import com.quimian.setalyzer.util.SystemUiHider;
  * 
  * @see SystemUiHider
  */
-public class SetViewerActivity extends Activity implements TextureView.SurfaceTextureListener {
+public class SetViewerActivity extends Activity implements SurfaceHolder.Callback, PreviewCallback {
 	/**
 	 * Whether or not the system UI should be auto-hidden after
 	 * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
@@ -73,11 +74,9 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	/**
 	 * Storage for boof image conversion.
 	 */
-	private byte[] mStorage;
-	
-	private Bitmap mBmp;
-	
 	private ImageUInt8 mImage;
+	
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -87,12 +86,13 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 		setContentView(R.layout.activity_set_viewer);
 
 		final View controlsView = findViewById(R.id.fullscreen_content_controls);
-		final TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
+		final SurfaceView contentView = (SurfaceView) findViewById(R.id.fullscreen_content);
 	
 		if (contentView == null) {
 			Log.i("Setalyzer", "contentView is null");
 		}
-        contentView.setSurfaceTextureListener(this);
+		SurfaceHolder holder = contentView.getHolder();
+		holder.addCallback(this);
 		
 		// Set up an instance of SystemUiHider to control the system UI for
 		// this activity.`	
@@ -180,44 +180,41 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 //		bmp = ConvertBitmap.grayToBitmap(image, Bitmap.Config.ARGB_8888);
 //		displayImage(bmp);
 		
-		ImageFloat32 segmentsImage = getFloat32FromTextureView();
-		ImageUInt8 linesImage = getUInt8FromTextureView();		
+		ImageUInt8 linesImage = mImage.clone();		
 		List<LineParametric2D_F32> lines = 
 				LineDetector.detectLines(linesImage, ImageUInt8.class, ImageSInt16.class);
-		List<LineSegment2D_F32> segments = 
-				LineDetector.detectLineSegments(segmentsImage, ImageFloat32.class, ImageFloat32.class);
+//		List<LineSegment2D_F32> segments = 
+//				LineDetector.detectLineSegments(segmentsImage, ImageFloat32.class, ImageFloat32.class);
 		LineDetector.overlayLines(linesImage, lines);
-		LineDetector.overlayLineSegments(segmentsImage, segments);
+//		LineDetector.overlayLineSegments(segmentsImage, segments);
 
 		Bitmap bmp = ConvertBitmap.grayToBitmap(linesImage, Bitmap.Config.ARGB_8888);
 		displayImage(bmp);
 	}
-	
-	public ImageFloat32 getFloat32FromTextureView() {
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		Bitmap bmp = contentView.getBitmap();
-		ImageFloat32 image = ConvertBitmap.bitmapToGray(bmp, (ImageFloat32)null, null);
 		
-		return image;
-	}
-	public ImageUInt8 getUInt8FromTextureView() {
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		Bitmap bmp = contentView.getBitmap();
-		ImageUInt8 image = ConvertBitmap.bitmapToGray(bmp, (ImageUInt8)null, null);
-		
-		return image;
+	private byte[] allocateBuffer() {
+		Camera.Size psize = mCamera.getParameters().getPreviewSize();
+		int depth = android.graphics.ImageFormat.getBitsPerPixel(mCamera.getParameters().getPreviewFormat());
+		int size = psize.width * psize.height * depth / 8;
+		return new byte[size];
 	}
 	
-	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-		initializeCamera(surface);
-    }
+    private void initializeCamera(SurfaceHolder holder) {
+    	if (holder == null || holder.getSurface() == null)  {
+    		return;
+    	}
 
-    private void initializeCamera(SurfaceTexture surface) {
+    	if (mCamera != null) {
+    		surfaceDestroyed(holder);
+    	}
+
     	Log.i("Setalyzer", "initializeCamera");
     	mCamera = Camera.open();
 
         try {
-            mCamera.setPreviewTexture(surface);
+        	mCamera.setPreviewDisplay(holder);
+        	mCamera.setPreviewCallbackWithBuffer(this);
+        	mCamera.addCallbackBuffer(allocateBuffer());
     		setCameraDisplayOrientation(this, 0, mCamera);
             mCamera.startPreview();
         } catch (IOException ioe) {
@@ -225,40 +222,47 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
         }		
 	}
 
-
-	public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+    @Override
+	public void surfaceChanged(SurfaceHolder holder, int format, int width,
+			int height) {
 		setCameraDisplayOrientation(this, 0, mCamera);
-        // Ignored, Camera does all the work for us
-		mBmp = null;
-		mStorage = null;
-		mImage = null;
-    }
 
-    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+		mImage = null;
+	}
+
+	@Override
+	public void surfaceCreated(SurfaceHolder holder) {
+		initializeCamera(holder);
+	}
+
+	@Override
+	public void surfaceDestroyed(SurfaceHolder holder) {
         if (mCamera != null) {
         	mCamera.stopPreview();
         	mCamera.setPreviewCallback(null);
         	mCamera.release();
         	mCamera = null;
         }
-        return true;
-    }
+	}
 
-    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        // Invoked every time there's a new Camera preview frame
-		TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
-		if (mBmp == null) {
-			mBmp = contentView.getBitmap();
-//			mBmp = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888);
-		} else {
-			contentView.getBitmap(mBmp);
-		}
-		if (mStorage == null) {
-			mStorage = ConvertBitmap.declareStorage(mBmp, null);
-		}
-		mImage = ConvertBitmap.bitmapToGray(mBmp, mImage, mStorage);
-    }
 	@Override
+	public void onPreviewFrame(byte[] data, Camera camera) {
+		if (mCamera == null || camera == null) {
+			return;
+		}
+		Camera.Size psize = camera.getParameters().getPreviewSize();
+		if (mImage == null) {
+			mImage = FactoryImage.create(ImageUInt8.class, psize.width, psize.height);
+		}
+
+		// Yeah YUV!
+		// Reference on why this is okay: http://stackoverflow.com/questions/5272388/need-help-with-androids-nv21-format
+		System.arraycopy(data, 0, mImage.data, 0, mImage.data.length);
+
+		camera.addCallbackBuffer(data);
+	}
+	
+    @Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 
@@ -350,10 +354,9 @@ public class SetViewerActivity extends Activity implements TextureView.SurfaceTe
 	@Override
 	protected void onResume() {
 		super.onResume();
-		TextureView previewView = (TextureView) findViewById(R.id.fullscreen_content);
-		SurfaceTexture previewSurfaceTexture = previewView.getSurfaceTexture();
-		if (previewSurfaceTexture != null) {
-			initializeCamera(previewSurfaceTexture);
+		SurfaceView preview = (SurfaceView) findViewById(R.id.fullscreen_content);
+		if (preview != null && preview.getHolder() != null) {
+			initializeCamera(preview.getHolder());
 		}
 	}
 
