@@ -19,9 +19,9 @@ public class Segmenter {
 	
 	private final static int cannyContourMinimumSize = 20; 
 
-	public static List<Region> segment(ImageUInt8 image) {
-		ArrayList<Region> thresholdRegionList = new ArrayList<Region>();
-		ArrayList<Region> cannyRegionList = new ArrayList<Region>();
+	public static List<float[]> segment(ImageUInt8 image) {
+		ArrayList<float[]> thresholdRegionList = new ArrayList<float[]>();
+		ArrayList<float[]> cannyRegionList = new ArrayList<float[]>();
 
 		// Downsample and determine mean pixel value to use as threshold
 		// Do we want to do this over subimages to deal with different lighting?
@@ -81,7 +81,7 @@ public class Segmenter {
 			for (Point2D_I32 point: contour) {
 				f64Contour.add(new Point2D_F64(point.x, point.y));
 			}
-			Log.i("Setalyzer", f64Contour.toString());
+//			Log.i("Setalyzer", f64Contour.toString());
 			cannyQuads.add(boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(f64Contour));
 		}
 		
@@ -106,21 +106,15 @@ public class Segmenter {
 //		return cannyRegionList;
 	}
 	
-	private static Region convertQuadToRegion(List<Point2D_F64> quad, int width, int height) {
+	private static float[] convertQuadToRegion(List<Point2D_F64> quad, int width, int height) {
 		if (quad == null)
 			return null;
-		Region r = new Region();
-		Path p = null;
-		for (Point2D_F64 po : quad) {
-			if (p == null) {
-				p = new Path();
-				p.moveTo((float)po.x, (float)po.y);
-			} else
-				p.lineTo((float)po.x, (float)po.y);
+		float[] f = new float[2 * quad.size()];
+		for (int i = 0; i < quad.size(); i++) {
+			f[2*i] = (float)quad.get(i).x;
+			f[2*i + 1] = (float)quad.get(i).y;
 		}
-		p.close();
-		r.setPath(p, new Region(0, 0, width, height));
-		return r;
+		return f;
 	}
 
 	private ImageUInt8 sample;
