@@ -1,7 +1,5 @@
 package com.quimian.setalyzer;
 
-import georegression.struct.line.LineParametric2D_F32;
-import georegression.struct.line.LineSegment2D_F32;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -12,15 +10,11 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.ColorFilter;
-import android.graphics.LightingColorFilter;
 import android.graphics.Rect;
-import android.graphics.Region;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
-import android.hardware.Camera.Size;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -28,16 +22,16 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.view.TextureView;
+import android.view.TextureView.SurfaceTextureListener;
 import android.view.View;
 import android.widget.Button;
 import boofcv.android.ConvertBitmap;
 import boofcv.struct.image.FactoryImage;
-import boofcv.struct.image.ImageSInt16;
 import boofcv.struct.image.ImageUInt8;
 
 import com.quimian.setalyzer.util.SetCard;
+import com.quimian.setalyzer.util.SubImage;
 import com.quimian.setalyzer.util.SystemUiHider;
 
 /**
@@ -46,7 +40,7 @@ import com.quimian.setalyzer.util.SystemUiHider;
  * 
  * @see SystemUiHider
  */
-public class SetViewerActivity extends Activity implements SurfaceHolder.Callback, PreviewCallback {
+public class SetViewerActivity extends Activity implements PreviewCallback, SurfaceTextureListener {
 	/**
 	 * Whether or not the system UI should be auto-hidden after
 	 * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
@@ -85,6 +79,10 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 	 */
 	private ImageUInt8 mImage;
 	
+	/**
+	 * Storage for android image conversion.
+	 */
+	private Bitmap mColor;
 	
 	
 	@Override
@@ -95,13 +93,12 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 		setContentView(R.layout.activity_set_viewer);
 
 		final View controlsView = findViewById(R.id.fullscreen_content_controls);
-		final SurfaceView contentView = (SurfaceView) findViewById(R.id.fullscreen_content);
+		final TextureView contentView = (TextureView) findViewById(R.id.fullscreen_content);
 	
 		if (contentView == null) {
 			Log.i("Setalyzer", "contentView is null");
 		}
-		SurfaceHolder holder = contentView.getHolder();
-		holder.addCallback(this);
+		contentView.setSurfaceTextureListener(this);
 		
 		// Set up an instance of SystemUiHider to control the system UI for
 		// this activity.`	
@@ -189,16 +186,21 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 //		bmp = ConvertBitmap.grayToBitmap(image, Bitmap.Config.ARGB_8888);
 //		displayImage(bmp);
 		
-		ImageUInt8 linesImage = mImage.clone();		
+		ImageUInt8 linesImage = mImage.clone();
+		if (mColor == null) {
+			Log.w("setalyzer", "mColor is null!");
+			return;
+		}
 
 		// Segment.
-		List<Region> cards = Segmenter.segment(linesImage);
+		List<float[]> cards = Segmenter.segment(linesImage);
 		
 		// Classify.
 		List<SetCard> setCards = new ArrayList<SetCard>();
+		SubImage si = new SubImage(mColor);
 		//TODO(willscott): confidence.
-		for(Region card: cards) {
-			CardClassifier cc = new CardClassifier(linesImage, card);
+		for(float[] card: cards) {
+			CardClassifier cc = new CardClassifier(si.getSubImage(card), card);
 			setCards.add(cc.getCard());
 		}
 		if (setCards.size() > 15) {
@@ -219,15 +221,13 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 			drawSet(bmp, sets.get(i), i, sets.size());
 		}
 
-		//Bitmap bmp = ConvertBitmap.grayToBitmap(Segmenter.test, Bitmap.Config.ARGB_8888);		
-		//Bitmap bmp = Bitmap.createBitmap(Segmenter.test.data, Segmenter.test.getWidth(), Segmenter.test.getHeight(), Bitmap.Config.ARGB_8888);
 		displayImage(bmp);
 	}
 	
 	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
 		int reps = 3;
 		int[] colors = new int[] {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.CYAN, Color.LTGRAY};
-		double sd = count;
+		double sd = count + 1.0;
 
 		for (SetCard card : set) {
 			if(card == null || card.location == null)
@@ -256,20 +256,20 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 		return new byte[size];
 	}
 	
-    private void initializeCamera(SurfaceHolder holder) {
-    	if (holder == null || holder.getSurface() == null)  {
+    private void initializeCamera(SurfaceTexture holder) {
+    	if (holder == null)  {
     		return;
     	}
 
     	if (mCamera != null) {
-    		surfaceDestroyed(holder);
+    		onSurfaceTextureDestroyed(holder);
     	}
 
     	Log.i("Setalyzer", "initializeCamera");
     	mCamera = Camera.open();
 
         try {
-        	mCamera.setPreviewDisplay(holder);
+        	mCamera.setPreviewTexture(holder);
         	mCamera.setPreviewCallbackWithBuffer(this);
         	mCamera.addCallbackBuffer(allocateBuffer());
     		setCameraDisplayOrientation(this, 0, mCamera);
@@ -280,26 +280,40 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 	}
 
     @Override
-	public void surfaceChanged(SurfaceHolder holder, int format, int width,
+	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width,
 			int height) {
-		setCameraDisplayOrientation(this, 0, mCamera);
-
-		mImage = null;
+		initializeCamera(surface);
 	}
 
 	@Override
-	public void surfaceCreated(SurfaceHolder holder) {
-		initializeCamera(holder);
-	}
-
-	@Override
-	public void surfaceDestroyed(SurfaceHolder holder) {
+	public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
         if (mCamera != null) {
         	mCamera.stopPreview();
         	mCamera.setPreviewCallback(null);
         	mCamera.release();
         	mCamera = null;
         }
+        mColor = null;
+		return false;
+	}
+
+	@Override
+	public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width,
+			int height) {
+		if (mCamera != null) {
+			setCameraDisplayOrientation(this, 0, mCamera);
+		}
+
+		mImage = null;
+		mColor = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+	}
+	
+	@Override
+	public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+		if (mColor != null) {
+			TextureView preview = (TextureView) findViewById(R.id.fullscreen_content);
+			preview.getBitmap(mColor);
+		}
 	}
 
 	@Override
@@ -411,9 +425,9 @@ public class SetViewerActivity extends Activity implements SurfaceHolder.Callbac
 	@Override
 	protected void onResume() {
 		super.onResume();
-		SurfaceView preview = (SurfaceView) findViewById(R.id.fullscreen_content);
-		if (preview != null && preview.getHolder() != null) {
-			initializeCamera(preview.getHolder());
+		TextureView preview = (TextureView) findViewById(R.id.fullscreen_content);
+		if (preview != null) {
+			initializeCamera(preview.getSurfaceTexture());
 		}
 	}
 

@@ -1,12 +1,23 @@
 package com.quimian.setalyzer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import com.quimian.setalyzer.util.SetCard;
 
 public class SetFinder {
+	private static HashMap<String, List<List<SetCard>>> cache = new HashMap<String, List<List<SetCard>>>();
+	
 	public static List<List<SetCard>> findSets(List<SetCard> cards) {
+		String key = "";
+		for (SetCard c : cards) {
+			key += c.toString();
+		}
+		if (cache.containsKey(key)) {
+			return cache.get(key);
+		}
+		
 		List<List<SetCard>> sets = new ArrayList<List<SetCard>>();
 		
 		for (SetCard a : cards) {
@@ -30,7 +41,7 @@ public class SetFinder {
 				}
 			}
 		}
-		
+		cache.put(key, sets);
 		return sets;
 	}
 	
