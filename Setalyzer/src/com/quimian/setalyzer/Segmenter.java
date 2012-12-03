@@ -37,7 +37,7 @@ public class Segmenter {
 		List<List<Point2D_I32>> cannyContours = LineDetector.cannyEdgeDetect(blurred);
 		
 		// We may want to dialate the image before labeling its blobs?
-		// Label blobs in out
+		// Label blobs 
 		ImageSInt32 out = FactoryImage.create(ImageSInt32.class, image.getWidth(), image.getHeight());
 		int numBlobs = boofcv.alg.filter.binary.BinaryImageOps.labelBlobs4(binary, out);
 		Log.i("Setalyzer", "Blobs found:" + numBlobs);
@@ -106,6 +106,14 @@ public class Segmenter {
 //		return cannyRegionList;
 	}
 	
+	// Assumes that the points are ordered going around the quadrilateral
+	private static double areaOfQuad(List<Point2D_F64> quad) {
+		double area1 = boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.area(quad.get(0), quad.get(2), quad.get(1));
+		double area2 = boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.area(quad.get(0), quad.get(2), quad.get(3));
+		
+		return area1 + area2;
+	}
+	
 	private static Region convertQuadToRegion(List<Point2D_F64> quad, int width, int height) {
 		if (quad == null)
 			return null;
@@ -129,14 +137,18 @@ public class Segmenter {
 	private Segmenter(ImageUInt8 image) {
 		int sampleWidth = 300;
 
-		double scale = sampleWidth / (1.0 * image.getWidth());
+		double scale = (1.0 * image.getWidth()) / sampleWidth;
 		int sampleHeight = (int)(image.getHeight() * scale);
 		ImageUInt8 sample = new ImageUInt8(sampleWidth, sampleHeight);
 		for (int x = 0; x < sampleWidth; x++) {
 			for (int y = 0; y < sampleHeight; y++) {
-				int value = image.get((int)(x * scale), (int)(y * scale));
-				sum += value;
-				sample.set(x, y, value);
+				int origX = (int)Math.floor(x*scale);
+				int origY = (int)Math.floor(y*scale);
+				if (image.isInBounds(origX, origY)) {
+					int value = image.get(origX, origY);
+					sum += value;
+					sample.set(x, y, value);
+				}
 			}
 		}
 		
