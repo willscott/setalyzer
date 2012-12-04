@@ -221,7 +221,8 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 			drawSet(bmp, sets.get(i), i, sets.size());
 		}
 
-		displayImage(bmp);
+		displayImage(si.getSubImage(cards.get(0)));
+//		displayImage(bmp);
 	}
 	
 	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
@@ -283,6 +284,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 	public void onSurfaceTextureAvailable(SurfaceTexture surface, int width,
 			int height) {
 		initializeCamera(surface);
+		mColor = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 	}
 
 	@Override
