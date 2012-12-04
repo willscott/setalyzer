@@ -36,7 +36,7 @@ public class Segmenter {
 		int numBlobs = boofcv.alg.filter.binary.BinaryImageOps.labelBlobs4(binary, out);
 		Log.i("Setalyzer", "Blobs found:" + numBlobs);
 		
-
+		List<Point2D_F64>[] points = quadsFromBlobs(out, numBlobs);
 		
 		// Generate quads for canny edges
 //		List<List<Point2D_F64>> cannyQuads = new ArrayList<List<Point2D_F64>>();
@@ -55,13 +55,13 @@ public class Segmenter {
 //		
 //		
 //		
-//		// Convert bounding quads into regions.
-//		for (List<Point2D_F64> quad : points) {
-//			if (quad == null) {
-//				continue;
-//			}
-//			thresholdRegionList.add(convertQuadToRegion(quad, image.getWidth(), image.getHeight()));
-//		}
+		// Convert bounding quads into regions.
+		for (List<Point2D_F64> quad : points) {
+			if (quad == null) {
+				continue;
+			}
+			thresholdRegionList.add(convertQuadToRegion(quad, image.getWidth(), image.getHeight()));
+		}
 //		for (List<Point2D_F64> quad: cannyQuads) {
 //			if (quad == null) {
 //				continue;
