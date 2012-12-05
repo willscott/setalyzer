@@ -4,9 +4,15 @@ import georegression.struct.point.Point2D_F64;
 import georegression.struct.point.Point2D_I32;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import boofcv.abst.feature.detect.edge.DetectEdgeContour;
+import boofcv.alg.misc.GPixelMath;
+import boofcv.core.image.ConvertBufferedImage;
+import boofcv.factory.feature.detect.edge.FactoryDetectEdgeContour;
 import boofcv.struct.image.FactoryImage;
+import boofcv.struct.image.ImageSInt16;
 import boofcv.struct.image.ImageSInt32;
 import boofcv.struct.image.ImageUInt8;
 
@@ -24,60 +30,36 @@ public class Segmenter {
 	private static final int 	BLOB_SIZE_THRESHOLD = 10;
 	private static final double CARD_AREA_TOLERANCE = 0.80;
 
-	public static List<float[]> segment(ImageUInt8 image) {
+	private static final int BLUR_RADIUS = 5;
+
+	public static List<List<Point2D_F64>> segment(ImageUInt8 image) {
 		ArrayList<float[]> thresholdRegionList = new ArrayList<float[]>();
 		ArrayList<float[]> cannyRegionList = new ArrayList<float[]>();
 
-		ImageUInt8 binary = thresholdImage(image);
+		Segmenter s = new Segmenter(image);
 
-		// todo: We may want to dialate the image before labeling its blobs?
-		// Label blobs 
-		ImageSInt32 out = FactoryImage.create(ImageSInt32.class, image.getWidth(), image.getHeight());
-		int numBlobs = boofcv.alg.filter.binary.BinaryImageOps.labelBlobs4(binary, out);
-		Log.i("Setalyzer", "Blobs found:" + numBlobs);
+		List<List<Point2D_F64>> regions = s.getBlobRegions();
+		if (regions == null) {
+			return null;
+		}
 		
-		List<Point2D_F64>[] points = quadsFromBlobs(out, numBlobs);
-		
-		// Generate quads for canny edges
-//		List<List<Point2D_F64>> cannyQuads = new ArrayList<List<Point2D_F64>>();
-//		for (int i = 0; i< cannyContours.size(); i++) {
-//			List<Point2D_I32> contour = cannyContours.get(i);
-//			if (contour.size() < cannyContourMinimumSize) {
-//				continue;
-//			}
-//			List<Point2D_F64> f64Contour = new ArrayList<Point2D_F64>();
-//			for (Point2D_I32 point: contour) {
-//				f64Contour.add(new Point2D_F64(point.x, point.y));
-//			}
-////			Log.i("Setalyzer", f64Contour.toString());
-//			cannyQuads.add(boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(f64Contour));
-//		}
-//		
-//		
-//		
 		// Convert bounding quads into regions.
-		for (List<Point2D_F64> quad : points) {
+		for (List<Point2D_F64> quad : regions) {
 			if (quad == null) {
 				continue;
 			}
 			thresholdRegionList.add(convertQuadToRegion(quad, image.getWidth(), image.getHeight()));
 		}
-//		for (List<Point2D_F64> quad: cannyQuads) {
-//			if (quad == null) {
-//				continue;
-//			}
-//			cannyRegionList.add(convertQuadToRegion(quad, image.getWidth(), image.getHeight()));
-//		}
 		
-		
-		return thresholdRegionList;
+		return regions;
+//		return thresholdRegionList;
 //		return cannyRegionList;
 	}
 	
 	// convert a blob image into quadrilaterals bounding each of the blobs
-	public static List<Point2D_F64>[] quadsFromBlobs(ImageSInt32 blobImage, int numBlobs) {
+	public static List<List<Point2D_F64>> quadsFromBlobs(ImageSInt32 blobImage, int numBlobs) {
 		@SuppressWarnings("unchecked")
-		List<Point2D_F64>[] points = new ArrayList[numBlobs];
+		List<List<Point2D_F64>> points = new ArrayList(); 
 		for (int i = 1; i < numBlobs; i++) {
 			//TODO: make fast
 			ArrayList<Point2D_F64> inClass = new ArrayList<Point2D_F64>();
@@ -90,28 +72,10 @@ public class Segmenter {
 			}
 			// Transform blobs into quadrilaterals, ignoring blobs of very small size
 			if (inClass.size() > BLOB_SIZE_THRESHOLD) {
-				points[i] = boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(inClass);
-			} else {
-				points[i] = null;
+				points.add(boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(inClass));
 			}
 		}
 		return points;
-	}
-	
-	public static ImageUInt8 thresholdImage(ImageUInt8 image) {
-		// Downsample and determine mean pixel value to use as threshold
-		// Do we want to do this over subimages to deal with different lighting?
-		Segmenter s = new Segmenter(image);
-		double threshold = s.getMean();
-		Log.i("Setalyzer", "THreshold value is " + threshold);
-		
-		// Blur
-		ImageUInt8 blurred = boofcv.alg.filter.blur.BlurImageOps.mean(image, null, 5, null);
-		// Threshold to generate binary image
-		ImageUInt8 binary = boofcv.alg.filter.binary.ThresholdImageOps.threshold(blurred, null, (int)threshold, false);
-		
-		
-		return binary;
 	}
 	
 	// Assumes that the points are ordered going around the quadrilateral
@@ -122,7 +86,7 @@ public class Segmenter {
 		return area1 + area2;
 	}
 	
-	private static float[] convertQuadToRegion(List<Point2D_F64> quad, int width, int height) {
+	public static float[] convertQuadToRegion(List<Point2D_F64> quad, int width, int height) {
 		if (quad == null)
 			return null;
 		float[] f = new float[2 * quad.size()];
@@ -134,31 +98,63 @@ public class Segmenter {
 	}
 
 	private ImageUInt8 sample;
-	private double sum;
+	private double mean;
 
-	private Segmenter(ImageUInt8 image) {
-		int sampleWidth = 300;
+	private ImageUInt8 blurred;
+	private List<List<Point2D_F64>> blobQuads;
+	private int numBlobs;
 
-		double scale = (1.0 * image.getWidth()) / sampleWidth;
-		int sampleHeight = (int)(image.getHeight() * scale);
-		ImageUInt8 sample = new ImageUInt8(sampleWidth, sampleHeight);
-		for (int x = 0; x < sampleWidth; x++) {
-			for (int y = 0; y < sampleHeight; y++) {
-				int origX = (int)Math.floor(x*scale);
-				int origY = (int)Math.floor(y*scale);
-				if (image.isInBounds(origX, origY)) {
-					int value = image.get(origX, origY);
-					sum += value;
-					sample.set(x, y, value);
-				}
-			}
-		}
+	private List<List<Point2D_I32>> prunedCannyEdgeList;
+
+	public Segmenter(ImageUInt8 gray) {
 		
+		// Downsample image to smaller size
+		int sampleWidth = 300;
+		double scale = (1.0 * gray.getWidth()) / sampleWidth;
+		int sampleHeight = (int)(gray.getHeight() * scale);
+		ImageUInt8 sample = new ImageUInt8(sampleWidth, sampleHeight);
+		boofcv.alg.distort.DistortImageOps.scale(gray, sample, boofcv.alg.interpolate.TypeInterpolate.NEAREST_NEIGHBOR);
+		
+		// Calculate mean
+		this.mean = GPixelMath.sum(gray)/(gray.width*gray.height);
+		
+		// Blur image and store blurred image
+		this.blurred = boofcv.alg.filter.blur.BlurImageOps.mean(sample, null, BLUR_RADIUS, null);
+		
+		// Create binary image and label blobs for threshold-based segmentation
+//		Log.i("Setalyzer", "THreshold value is " + this.mean);
+		// Threshold to generate binary image
+		ImageUInt8 binary = boofcv.alg.filter.binary.ThresholdImageOps.threshold(this.blurred, null, (int)this.mean, false);
+		ImageSInt32 blobImage = FactoryImage.create(ImageSInt32.class, sample.getWidth(), sample.getHeight());
+		this.numBlobs = boofcv.alg.filter.binary.BinaryImageOps.labelBlobs4(binary, blobImage);
+		this.blobQuads = quadsFromBlobs(blobImage, numBlobs);
+		
+		// Canny detect edges and store them
+		// Dynamic canny edge, which sets the threshold as a function of the image's edge intensity
+		DetectEdgeContour<ImageUInt8> cannyD =
+				FactoryDetectEdgeContour.canny(0.05,0.15,true,ImageUInt8.class,ImageSInt16.class);
+		cannyD.process(blurred);
+		List<List<Point2D_I32>> edges = cannyD.getContours();
+		
+		// Prune edges which are obviously not cards
+		List<List<Point2D_I32>> prunedEdgeList = new ArrayList<List<Point2D_I32>>();
+		for (List<Point2D_I32> edge: edges) {
+			// Disregard tiny contours
+			if (edge.size() < EDGE_SIZE_THRESHOLD) {
+				continue;
+			}
+			// Disregard shapes with blatantly non-card shapes
+			if (!isCardShaped(edge)) {
+				continue;
+			}
+			prunedEdgeList.add(edge);
+		}	
+		this.prunedCannyEdgeList = prunedEdgeList;
 		this.sample = sample;
 	}
 	
 	private double getMean() {
-		return sum / (1.0 * sample.getWidth() * sample.getHeight());
+		return mean;
 	}
 	
 	public static boolean topNSimilarSized(int[] areas, int n) {
@@ -177,16 +173,10 @@ public class Segmenter {
 		return true;
 	}
 
-	public static int areaOfRegion(List<Point2D_I32> list) {
-		// turn it into a quad
-		List<Point2D_F64> f64Contour = new ArrayList<Point2D_F64>();
-		for (Point2D_I32 point: list) {
-			f64Contour.add(new Point2D_F64(point.x, point.y));
-		}
-		
+	public static int areaOfRegion(List<Point2D_F64> list) {
 		List<Point2D_F64> quad;
 		try {
-			quad = boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(f64Contour);
+			quad = boofcv.alg.feature.detect.quadblob.FindBoundingQuadrilateral.findCorners(list);
 		}
 		catch (Exception e) {
 			System.out.println("finding corners of bounding quadrilateral failed");
@@ -261,6 +251,41 @@ public class Segmenter {
 
 	private static double euclidianDistance(Point2D_F64 p0, Point2D_F64 p1) {
 		return Math.sqrt(Math.pow(p0.x - p1.x, 2) + Math.pow(p0.y - p1.y, 2));
+	}
+
+	public List<List<Point2D_F64>> getBlobRegions() {
+		return blobQuads;
+//		if (this.blobQuads.size() < 9) {
+//			System.out.println("blobs can't find enough things that might be cards");
+//		}
+//		else {
+//		
+//			// See whether the top 9/12/15 ROIs by size are roughly the same size 
+//			// Calculate areas and sort
+//			int[] areas = new int[blobQuads.size()];
+//			for (int i=0; i<blobQuads.size(); i++) {
+//				areas[i] = Segmenter.areaOfRegion(blobQuads.get(i));
+//			}
+//			Arrays.sort(areas);
+//
+//			// From the top, see if they're all within tolerance from the mean
+//			int similarSizedLargest = -1;
+//			if (blobQuads.size() >= 15 && Segmenter.topNSimilarSized(areas, 15)) {
+//				similarSizedLargest = 15;
+//			}
+//			else if (blobQuads.size() >= 12 && Segmenter.topNSimilarSized(areas, 12)) {
+//				similarSizedLargest = 12;
+//			}
+//			else if (Segmenter.topNSimilarSized(areas, 9)) {
+//				similarSizedLargest = 9;
+//			}
+//
+//			if (similarSizedLargest != -1) {
+//				List<List<Point2D_F64>> finalEdgeList = blobQuads.subList(blobQuads.size()-similarSizedLargest, blobQuads.size()-1);
+//				return finalEdgeList;
+//			}
+//		}
+//		return null;
 	}
 
 }

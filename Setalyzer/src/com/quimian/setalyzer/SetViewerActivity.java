@@ -1,6 +1,8 @@
 package com.quimian.setalyzer;
 
 
+import georegression.struct.point.Point2D_F64;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -193,7 +195,15 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		}
 
 		// Segment.
-		List<float[]> cards = Segmenter.segment(linesImage);
+		List<float[]> cards = new ArrayList<float[]>();
+		List<List<Point2D_F64>> asPoints = Segmenter.segment(linesImage);
+		if (asPoints == null) {
+			Log.i("Setalyzer", "Couldn't find any possible cards in segmentation");
+			return;
+		}
+		for (List<Point2D_F64> roi: asPoints) {
+			cards.add(Segmenter.convertQuadToRegion(roi, linesImage.getWidth(), linesImage.getHeight()));
+		}
 		
 		// Classify.
 		List<SetCard> setCards = new ArrayList<SetCard>();
