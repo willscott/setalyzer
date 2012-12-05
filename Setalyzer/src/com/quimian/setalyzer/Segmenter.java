@@ -102,6 +102,7 @@ public class Segmenter {
 
 	private ImageUInt8 blurred;
 	private List<List<Point2D_F64>> blobQuads;
+	private double scale;
 	private int numBlobs;
 
 	private List<List<Point2D_I32>> prunedCannyEdgeList;
@@ -110,8 +111,8 @@ public class Segmenter {
 		
 		// Downsample image to smaller size
 		int sampleWidth = 300;
-		double scale = (1.0 * gray.getWidth()) / sampleWidth;
-		int sampleHeight = (int)(gray.getHeight() * scale);
+		this.scale = (1.0 * gray.getWidth()) / sampleWidth;
+		int sampleHeight = (int)(gray.getHeight() / scale);
 		ImageUInt8 sample = new ImageUInt8(sampleWidth, sampleHeight);
 		boofcv.alg.distort.DistortImageOps.scale(gray, sample, boofcv.alg.interpolate.TypeInterpolate.NEAREST_NEIGHBOR);
 		
@@ -254,6 +255,15 @@ public class Segmenter {
 	}
 
 	public List<List<Point2D_F64>> getBlobRegions() {
+		if (this.scale != 1.0) {
+			for (List<Point2D_F64> l : blobQuads) {
+				for (Point2D_F64 p : l) {
+					p.x *= this.scale;
+					p.y *= this.scale;
+				}
+			}
+			this.scale = 1.0;
+		}
 		return blobQuads;
 //		if (this.blobQuads.size() < 9) {
 //			System.out.println("blobs can't find enough things that might be cards");

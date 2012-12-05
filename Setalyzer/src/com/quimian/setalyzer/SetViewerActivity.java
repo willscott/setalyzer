@@ -253,7 +253,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 					for (int p = 0; p < bounds.width(); p++) {
 						int x = bounds.left + p;
 						int y = bounds.top + d - p;
-						if(card.location.contains(x, y)) {
+						if(card.location.contains(x, y) && y < image.getHeight()) {
 							image.setPixel(x, y, colors[idx]);
 						}
 					}
