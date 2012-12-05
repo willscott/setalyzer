@@ -56,8 +56,10 @@ public class CardClassifier {
 	 * @param image
 	 */
 	private void detectColor(Bitmap image) {
-		int reference = 0;
-		int refValue = 0;
+		int light = 0;
+		int refLight = 0;
+		int dark = Integer.MAX_VALUE;
+		int refDark = Integer.MAX_VALUE;
 		int padding = image.getHeight() / 10;
 		double aspect = image.getWidth() / (1.0 * image.getHeight());
 		int stride = 3;
@@ -65,13 +67,18 @@ public class CardClassifier {
 			int x = (int)(d * aspect);
 			int px = image.getPixel(x, d);
 			int val = Color.red(px) + Color.green(px) + Color.blue(px);
-			if (val > refValue) {
-				reference = Color.WHITE - px;
-				refValue = val;
+			if (val > refLight) {
+				light = px;
+				refLight = val;
+			}
+			if (val < refDark) {
+				dark = px;
+				refDark = val;
 			}
 		}
 		
 		int red = 0, green = 0, blue = 0;
+		int white_threshold = (int)(light - (light - dark)*0.95);
 		int r, g, b;
 		int x_0 = image.getWidth() / 3;
 		int width = x_0 + image.getWidth() / 3;
@@ -80,7 +87,10 @@ public class CardClassifier {
 
 		for (int x = x_0; x < width; x += stride) {
 			for (int y = y_0; y < height; y += stride) {
-				int px = image.getPixel(x, y) + reference;
+				int px = image.getPixel(x, y);
+				if (px > white_threshold)
+					continue;
+				px += (Color.WHITE - light);
 				r = Color.red(px);
 				g = Color.green(px);
 				b = Color.blue(px);
