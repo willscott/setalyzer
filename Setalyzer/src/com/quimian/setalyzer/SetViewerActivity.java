@@ -221,8 +221,10 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 			drawSet(bmp, sets.get(i), i, sets.size());
 		}
 
-		displayImage(si.getSubImage(cards.get(0)));
-//		displayImage(bmp);
+		if (cards.size() > 0) {
+			displayImage(si.getSubImage(cards.get(0)));
+		}
+		displayImage(bmp);
 	}
 	
 	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {

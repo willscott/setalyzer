@@ -2,6 +2,7 @@ package com.quimian.setalyzer.util;
 
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
+import android.util.Log;
 
 public class SubImage {
 	float[] dest = {
@@ -30,6 +31,7 @@ public class SubImage {
 			roi[7] = g;
 		}
 		
+		Log.i("Setaylzer", "transformation mtrx is " + roi[0] +"," + roi[1] + " -> " + roi[2] +","+roi[3] + " -> " + roi[4]+","+roi[5]+" ->" + roi[6] + ","+ roi[7]);
 		Matrix transform = new Matrix();
 		transform.setPolyToPoly(roi, 0, dest, 0, 4);
 
