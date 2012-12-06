@@ -39,6 +39,7 @@ public class Segmenter {
 		Segmenter s = new Segmenter(image);
 
 		List<List<Point2D_F64>> regions = s.getBlobRegions();
+//		List<List<Point2D_F64>> regions = s.getEdgeRegions();
 		if (regions == null) {
 			return null;
 		}
@@ -105,7 +106,7 @@ public class Segmenter {
 	private double scale;
 	private int numBlobs;
 
-	private List<List<Point2D_I32>> prunedCannyEdgeList;
+	private List<List<Point2D_F64>> prunedCannyEdgeList;
 
 	public Segmenter(ImageUInt8 gray) {
 		
@@ -138,7 +139,7 @@ public class Segmenter {
 		List<List<Point2D_I32>> edges = cannyD.getContours();
 		
 		// Prune edges which are obviously not cards
-		List<List<Point2D_I32>> prunedEdgeList = new ArrayList<List<Point2D_I32>>();
+		List<List<Point2D_F64>> prunedEdgeList = new ArrayList<List<Point2D_F64>>();
 		for (List<Point2D_I32> edge: edges) {
 			// Disregard tiny contours
 			if (edge.size() < EDGE_SIZE_THRESHOLD) {
@@ -148,7 +149,11 @@ public class Segmenter {
 			if (!isCardShaped(edge)) {
 				continue;
 			}
-			prunedEdgeList.add(edge);
+			List<Point2D_F64> f64Edge = new ArrayList<Point2D_F64>();
+			for (Point2D_I32 p : edge) {
+				f64Edge.add(new Point2D_F64(p.x, p.y));
+			}
+			prunedEdgeList.add(f64Edge);
 		}	
 		this.prunedCannyEdgeList = prunedEdgeList;
 		this.sample = sample;
@@ -252,6 +257,19 @@ public class Segmenter {
 
 	private static double euclidianDistance(Point2D_F64 p0, Point2D_F64 p1) {
 		return Math.sqrt(Math.pow(p0.x - p1.x, 2) + Math.pow(p0.y - p1.y, 2));
+	}
+	
+	public List<List<Point2D_F64>> getEdgeRegions() {
+		if (this.scale != 1.0) {
+			for (List<Point2D_F64> l : prunedCannyEdgeList) {
+				for (Point2D_F64 p : l) {
+					p.x *= this.scale;
+					p.y *= this.scale;
+				}
+			}
+			this.scale = 1.0;
+		}
+		return prunedCannyEdgeList;
 	}
 
 	public List<List<Point2D_F64>> getBlobRegions() {
