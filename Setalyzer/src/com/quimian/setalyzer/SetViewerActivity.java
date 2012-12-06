@@ -13,6 +13,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -193,6 +194,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 			Log.w("setalyzer", "mColor is null!");
 			return;
 		}
+		Matrix coordinateTransform = getXform(linesImage.width, linesImage.height, mColor.getWidth(), mColor.getHeight());
 
 		// Segment.
 		List<float[]> cards = new ArrayList<float[]>();
@@ -207,10 +209,11 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		
 		// Classify.
 		List<SetCard> setCards = new ArrayList<SetCard>();
-		SubImage si = new SubImage(mColor);
+		SubImage si = new SubImage(mColor, coordinateTransform);
 		//TODO(willscott): confidence.
 		for(float[] card: cards) {
-			CardClassifier cc = new CardClassifier(si.getSubImage(card), card);
+			Bitmap subCard = si.getSubImage(card);
+			CardClassifier cc = new CardClassifier(subCard, card);
 			setCards.add(cc.getCard());
 		}
 		if (setCards.size() > 15) {
@@ -219,24 +222,36 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		Log.i("Setalyzer", "Cards detected: " + setCards.size());
 		// Solve.
 		List<List<SetCard>> sets = SetFinder.findSets(setCards);
-		
-		// Display.
-		Bitmap bmp = ConvertBitmap.grayToBitmap(linesImage, Bitmap.Config.ARGB_8888);
-		
+				
 		Log.i("Setalyzer", "Sets found: " + sets.size());
 		if (sets.size() > 7) {
 			sets = sets.subList(0, 7);
 		}
 		for(int i = 0; i < sets.size(); i++) {
-			drawSet(bmp, sets.get(i), i, sets.size());
+			drawSet(mColor, sets.get(i), i, sets.size());
 		}
 
-		if (cards.size() > 0) {
-			displayImage(si.getSubImage(cards.get(0)));
-		}
-		displayImage(bmp);
+		displayImage(mColor);
 	}
 	
+	private Matrix getXform(int width, int height, int width2, int height2) {
+		Matrix coordinateTransform = new Matrix();
+		float[] source = {0, 0, width, 0, width, height, 0, height};
+		float[] dest;
+		
+		if ((width > height && width2 > height2) || (width < height && width2 < height2)) {
+			float[] samedest = {0, 0, width2, 0, width2, height2, 0, height2};
+			dest = samedest;
+		} else {
+			float[] diffdest = {0, 0, 0, height2, width2, height2, width2, 0};
+			dest = diffdest;
+		}
+		
+		coordinateTransform.setPolyToPoly(source, 0, dest, 0, 4);
+
+		return coordinateTransform;
+	}
+
 	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
 		int reps = 3;
 		int[] colors = new int[] {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.CYAN, Color.LTGRAY};
