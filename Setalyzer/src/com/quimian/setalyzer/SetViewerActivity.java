@@ -238,6 +238,10 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		Matrix coordinateTransform = new Matrix();
 		float[] source = {0, 0, width, 0, width, height, 0, height};
 		float[] dest;
+		if (width2 < height2) {
+			float[] flippedSource = { 0, height, width, height, width, 0, 0, 0};
+			source = flippedSource;
+		}
 		
 		if ((width > height && width2 > height2) || (width < height && width2 < height2)) {
 			float[] samedest = {0, 0, width2, 0, width2, height2, 0, height2};
