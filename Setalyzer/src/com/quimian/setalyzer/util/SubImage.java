@@ -28,8 +28,7 @@ public class SubImage {
 	 * @return A bitmap of a specific slice of the image.
 	 */
 	public Bitmap getSubImage(float[] roi) {
-		Log.i("Setaylzer", "transformation mtrx is " + roi[0] +"," + roi[1] + " -> " + roi[2] +","+roi[3] + " -> " + roi[4]+","+roi[5]+" ->" + roi[6] + ","+ roi[7]);
-
+		// Map through coordinate space transform.
 		float[] map = new float[2];
 		for (int i = 0; i < 4; i++) {
 			map[0] = roi[2*i];
@@ -39,7 +38,7 @@ public class SubImage {
 			roi[2 * i + 1] = map[1];
 		}
 
-		// Rotate to smallest first.
+		// Rotate the upper left corner first.
 		int min = Integer.MAX_VALUE;
 		int min_idx = 0;
 		for (int i = 0; i < 4; i++) {
@@ -52,11 +51,9 @@ public class SubImage {
 		for (int i = 0; i < 8; i++) {
 			mappedROI[i] = roi[(i + 2*min_idx) % 8];
 		}
-		roi = mappedROI;
 
-		Log.i("Setaylzer", "transformation mtrx is " + roi[0] +"," + roi[1] + " -> " + roi[2] +","+roi[3] + " -> " + roi[4]+","+roi[5]+" ->" + roi[6] + ","+ roi[7]);
 		Matrix transform = new Matrix();
-		transform.setPolyToPoly(roi, 0, dest, 0, 4);
+		transform.setPolyToPoly(mappedROI, 0, dest, 0, 4);
 		
 		return Bitmap.createBitmap(image, 0, 0, 100, 150, transform, true);
 	}

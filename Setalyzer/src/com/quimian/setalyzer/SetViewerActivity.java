@@ -236,23 +236,23 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 	
 	private Matrix getXform(int width, int height, int width2, int height2) {
 		Matrix coordinateTransform = new Matrix();
-		float[] source = {0, 0, width, 0, width, height, 0, height};
+		float[] source;
 		float[] dest;
+		// If portrait vs landscape.
 		if (width2 < height2) {
-			float[] flippedSource = { 0, height, width, height, width, 0, 0, 0};
-			source = flippedSource;
+			source = new float[] { 0, height, width, height, width, 0, 0, 0};
+		} else {
+			source = new float[] {0, 0, width, 0, width, height, 0, height};
 		}
 		
+		// If aspect ratios same vs different.
 		if ((width > height && width2 > height2) || (width < height && width2 < height2)) {
-			float[] samedest = {0, 0, width2, 0, width2, height2, 0, height2};
-			dest = samedest;
+			dest = new float[] {0, 0, width2, 0, width2, height2, 0, height2};
 		} else {
-			float[] diffdest = {0, 0, 0, height2, width2, height2, width2, 0};
-			dest = diffdest;
+			dest = new float[] {0, 0, 0, height2, width2, height2, width2, 0};
 		}
 		
 		coordinateTransform.setPolyToPoly(source, 0, dest, 0, 4);
-
 		return coordinateTransform;
 	}
 
