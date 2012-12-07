@@ -91,6 +91,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		Log.i("Setalyzer", "Max memory: " + Runtime.getRuntime().maxMemory() / 1024 / 1024 + "M");
 
 		Log.i(getString(R.string.app_name), "onCreate");
 		setContentView(R.layout.activity_set_viewer);

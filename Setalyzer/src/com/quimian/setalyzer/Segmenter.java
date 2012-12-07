@@ -8,6 +8,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import boofcv.abst.feature.detect.edge.DetectEdgeContour;
+import boofcv.alg.feature.detect.grid.HistogramTwoPeaks;
+import boofcv.alg.feature.detect.grid.IntensityHistogram;
 import boofcv.alg.misc.GPixelMath;
 import boofcv.core.image.ConvertBufferedImage;
 import boofcv.factory.feature.detect.edge.FactoryDetectEdgeContour;
@@ -108,6 +110,14 @@ public class Segmenter {
 
 	private List<List<Point2D_F64>> prunedCannyEdgeList;
 
+	private int threshold;
+
+	private int[] s;
+
+//	private int[] brightnessHistogram;
+	private boofcv.alg.feature.detect.grid.IntensityHistogram brightnessHistogram;
+	private final static int NUMBINS = 8;
+
 	public Segmenter(ImageUInt8 gray) {
 		
 		// Downsample image to smaller size
@@ -116,9 +126,13 @@ public class Segmenter {
 		int sampleHeight = (int)(gray.getHeight() / scale);
 		ImageUInt8 sample = new ImageUInt8(sampleWidth, sampleHeight);
 		boofcv.alg.distort.DistortImageOps.scale(gray, sample, boofcv.alg.interpolate.TypeInterpolate.NEAREST_NEIGHBOR);
+		this.sample = sample;
 		
 		// Calculate mean
 		this.mean = GPixelMath.sum(gray)/(gray.width*gray.height);
+		this.threshold = this.calculateThreshold();
+		
+		Log.i("Setalyzer", "brightness histogram: " + Arrays.toString(this.brightnessHistogram.histogram));
 		
 		// Blur image and store blurred image
 		this.blurred = boofcv.alg.filter.blur.BlurImageOps.mean(sample, null, BLUR_RADIUS, null);
@@ -156,9 +170,21 @@ public class Segmenter {
 			prunedEdgeList.add(f64Edge);
 		}	
 		this.prunedCannyEdgeList = prunedEdgeList;
-		this.sample = sample;
 	}
 	
+	private int calculateThreshold() {
+		brightnessHistogram = new IntensityHistogram(NUMBINS, 256);
+		for (byte v : this.sample.data) {
+			int value=(v&0xFF);  // convert to unsigned int
+			brightnessHistogram.add(value);
+		}
+		final int MIN_PEAK_SEPARATION = NUMBINS * 3;
+		HistogramTwoPeaks peakDetector = new HistogramTwoPeaks(MIN_PEAK_SEPARATION);
+		peakDetector.computePeaks(brightnessHistogram);
+		Log.i("Setalyzer", "high peak: " + peakDetector.peakHigh + ", low peak: " + peakDetector.peakLow);
+		return (int) ((peakDetector.peakHigh + peakDetector.peakLow) / 2);
+	}
+
 	private double getMean() {
 		return mean;
 	}
