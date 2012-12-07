@@ -280,7 +280,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 	private void drawSetCard(Bitmap image, SetCard card, int idx) {
 		Canvas c = new Canvas(image);
 		Paint p = new Paint();
-		p.setColor(Color.HSVToColor(new float[] {(60 * idx) % 255, 255, 255}));
+		p.setColor(card.color == SetCard.Color.BLUE? Color.BLUE : card.color == SetCard.Color.RED? Color.RED : Color.GREEN);
 		p.setStrokeWidth(2);
 		p.setStyle(Paint.Style.STROKE);
 		c.drawPath(card.location.getBoundaryPath(), p);
