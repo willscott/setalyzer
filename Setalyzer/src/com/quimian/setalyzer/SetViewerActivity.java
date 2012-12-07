@@ -207,7 +207,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		Segmenter s = new Segmenter(linesImage);
 
 		List<List<Point2D_F64>> regions = s.getBlobRegions();
-//		List<List<Point2D_F64>> regions = s.getEdgeRegions();
+		//List<List<Point2D_F64>> edges = s.getEdges();
 		if (regions == null) {
 			Log.i("Setalyzer", "Couldn't find any possible cards in segmentation");
 			return;
