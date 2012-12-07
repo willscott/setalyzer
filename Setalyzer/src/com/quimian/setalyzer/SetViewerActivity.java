@@ -199,12 +199,27 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 
 		// Segment.
 		List<float[]> cards = new ArrayList<float[]>();
-		List<List<Point2D_F64>> asPoints = Segmenter.segment(linesImage);
-		if (asPoints == null) {
+		ArrayList<float[]> thresholdRegionList = new ArrayList<float[]>();
+//		ArrayList<float[]> cannyRegionList = new ArrayList<float[]>();
+
+		Segmenter s = new Segmenter(linesImage);
+
+		List<List<Point2D_F64>> regions = s.getBlobRegions();
+//		List<List<Point2D_F64>> regions = s.getEdgeRegions();
+		if (regions == null) {
 			Log.i("Setalyzer", "Couldn't find any possible cards in segmentation");
 			return;
 		}
-		for (List<Point2D_F64> roi: asPoints) {
+		
+		// Convert bounding quads into regions.
+//		for (List<Point2D_F64> quad : regions) {
+//			if (quad == null) {
+//				continue;
+//			}
+//			thresholdRegionList.add(Segmenter.convertQuadToRegion(quad, linesImage.getWidth(), linesImage.getHeight()));
+//		}
+		
+		for (List<Point2D_F64> roi: regions) {
 			cards.add(Segmenter.convertQuadToRegion(roi, linesImage.getWidth(), linesImage.getHeight()));
 		}
 		
