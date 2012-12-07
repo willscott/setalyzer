@@ -160,9 +160,9 @@ public class Segmenter {
 				continue;
 			}
 			// Disregard shapes with blatantly non-card shapes
-			if (!isCardShaped(edge)) {
-				continue;
-			}
+//			if (!isCardShaped(edge)) {
+//				continue;
+//			}
 			List<Point2D_F64> f64Edge = new ArrayList<Point2D_F64>();
 			for (Point2D_I32 p : edge) {
 				f64Edge.add(new Point2D_F64(p.x, p.y));
@@ -285,7 +285,7 @@ public class Segmenter {
 		return Math.sqrt(Math.pow(p0.x - p1.x, 2) + Math.pow(p0.y - p1.y, 2));
 	}
 	
-	public List<List<Point2D_F64>> getEdgeRegions() {
+	public List<List<Point2D_F64>> getEdges() {
 		if (this.scale != 1.0) {
 			for (List<Point2D_F64> l : prunedCannyEdgeList) {
 				for (Point2D_F64 p : l) {
