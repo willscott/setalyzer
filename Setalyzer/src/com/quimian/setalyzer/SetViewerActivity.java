@@ -12,8 +12,10 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -223,13 +225,16 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		Log.i("Setalyzer", "Cards detected: " + setCards.size());
 		// Solve.
 		List<List<SetCard>> sets = SetFinder.findSets(setCards);
-				
+		
 		Log.i("Setalyzer", "Sets found: " + sets.size());
 		if (sets.size() > 7) {
 			sets = sets.subList(0, 7);
 		}
 		for(int i = 0; i < sets.size(); i++) {
 			drawSet(mColor, sets.get(i), i, sets.size());
+		}
+		for (int j = 0; j < setCards.size(); j++) {
+			drawSetCard(mColor, setCards.get(j), j);
 		}
 
 		displayImage(mColor);
@@ -257,6 +262,15 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		return coordinateTransform;
 	}
 
+	private void drawSetCard(Bitmap image, SetCard card, int idx) {
+		Canvas c = new Canvas(image);
+		Paint p = new Paint();
+		p.setColor(Color.HSVToColor(new float[] {(60 * idx) % 255, 255, 255}));
+		p.setStrokeWidth(2);
+		p.setStyle(Paint.Style.STROKE);
+		c.drawPath(card.location.getBoundaryPath(), p);
+	}
+	
 	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
 		int reps = 3;
 		int[] colors = new int[] {Color.BLUE, Color.RED, Color.GREEN, Color.YELLOW, Color.BLACK, Color.CYAN, Color.LTGRAY};
