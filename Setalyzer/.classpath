@@ -10,5 +10,6 @@
 	<classpathentry kind="lib" path="libs/EJML.jar"/>
 	<classpathentry kind="lib" path="libs/GeoRegression.jar"/>
 	<classpathentry kind="lib" path="libs/libpja.jar"/>
+	<classpathentry kind="lib" path="libs/wekaSTRIPPED.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

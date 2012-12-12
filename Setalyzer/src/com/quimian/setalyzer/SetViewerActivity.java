@@ -17,6 +17,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Region;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
@@ -283,7 +284,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		p.setColor(card.color == SetCard.Color.BLUE? Color.BLUE : card.color == SetCard.Color.RED? Color.RED : Color.GREEN);
 		p.setStrokeWidth(2);
 		p.setStyle(Paint.Style.STROKE);
-		c.drawPath(card.location.getBoundaryPath(), p);
+		c.drawPath(((Region)card.location).getBoundaryPath(), p);
 	}
 	
 	private void drawSet(Bitmap image, List<SetCard> set, int idx, int count) {
@@ -294,15 +295,15 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		for (SetCard card : set) {
 			if(card == null || card.location == null)
 				continue;
-			Rect bounds = card.location.getBounds();
+			Rect bounds = ((Region)card.location).getBounds();
 			for(int d = 0; d < bounds.width() + bounds.height(); d++) {
 				double stripePos = ((d / (1.0 * (bounds.width() + bounds.height()))) * reps);
 				stripePos -= Math.floor(stripePos);
 				if (stripePos > (idx/(sd * 1.0)) && stripePos < ((idx+1)/(sd * 1.0))) {
 					for (int p = 0; p < bounds.width(); p++) {
-						int x = bounds.left + p;
+						int x = Math.min(bounds.left, 0) + p;
 						int y = bounds.top + d - p;
-						if(card.location.contains(x, y) && y < image.getHeight()) {
+						if(((Region)card.location).contains(x, y) && y < image.getHeight()) {
 							image.setPixel(x, y, colors[idx]);
 						}
 					}
