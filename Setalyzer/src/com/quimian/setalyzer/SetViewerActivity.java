@@ -32,6 +32,7 @@ import android.view.TextureView;
 import android.view.TextureView.SurfaceTextureListener;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import boofcv.android.ConvertBitmap;
 import boofcv.struct.image.FactoryImage;
 import boofcv.struct.image.ImageUInt8;
@@ -169,6 +170,8 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 		// while interacting with the UI.
 		findViewById(R.id.dummy_button).setOnTouchListener(
 				mDelayHideTouchListener);
+		findViewById(R.id.train_button).setOnTouchListener(
+				mDelayHideTouchListener);
 		
 
 		Button button = (Button) findViewById(R.id.dummy_button);
@@ -178,8 +181,20 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 				handleClick(v);
 			}
 		});
+		Button train = (Button) findViewById(R.id.train_button);
+		train.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				handleTrain(v);
+			}
+		});
 		
 	} //end of onCreate
+	
+	public void handleTrain(View v) {
+		EditText et = (EditText)findViewById(R.id.editText1);
+		new FeatureTrainer().execute(et.getText().toString());
+	}
 	
 	public void handleClick(View v) {
 		

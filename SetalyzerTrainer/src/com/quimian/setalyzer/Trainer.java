@@ -5,6 +5,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -115,6 +117,9 @@ public class Trainer extends JApplet {
 						System.out.println("Recorded!");
 						trainer.append();
 						SelectableLabel.this.setIcon(null);
+					} else if (key.getKeyCode() == KeyEvent.VK_ESCAPE) {
+						System.out.println("Cleared!");
+						SelectableLabel.this.cardClass.location = new ArrayList<Float>();
 					}
 				}
 				
@@ -130,11 +135,45 @@ public class Trainer extends JApplet {
 					
 				}
 			});
+			this.addMouseListener(new MouseListener() {
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					// TODO Auto-generated method stub
+					
+				}
+				
+				@Override
+				public void mousePressed(MouseEvent e) {
+					// TODO Auto-generated method stub
+					
+				}
+				
+				@Override
+				public void mouseExited(MouseEvent e) {
+					// TODO Auto-generated method stub
+					
+				}
+				
+				@Override
+				public void mouseEntered(MouseEvent e) {
+					// TODO Auto-generated method stub
+					
+				}
+				
+				@SuppressWarnings("unchecked")
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getX()));
+					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getY()));
+				}
+			});
 		}
+		
 		
 		public void update() {
 			this.requestFocus();
 			this.cardClass = new SetCard();
+			this.cardClass.location = new ArrayList<Float>();
 			try {
 				BufferedImage myPicture = ImageIO.read(trainer.currentImage);
 				this.setIcon(new ImageIcon(myPicture));

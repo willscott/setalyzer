@@ -3,9 +3,10 @@
 
     <string name="app_name">Setalyzer</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
-    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_button">Analyze</string>
     <string name="hello_world">Hello world!</string>
     <string name="menu_settings">Settings</string>
     <string name="title_activity_output_viewer">OutputViewerActivity</string>
+    <string name="train_button">Train</string>
 
 </resources>
