@@ -7,16 +7,17 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
-import javax.print.attribute.standard.JobHoldUntil;
 import javax.swing.ImageIcon;
 import javax.swing.JApplet;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
-import javax.swing.JPanel;
 
 import com.quimian.setalyzer.util.SetCard;
 
@@ -24,6 +25,7 @@ public class Trainer extends JApplet {
 	private static final long serialVersionUID = 3527853849015964123L;
 	File currentImage = null;
 	SelectableLabel picLabel;
+	ArrayList<SetCard> labeledCards = new ArrayList<SetCard>();
 
 	public void init() {
 		JButton chooser  = new JButton("Select file");
@@ -37,10 +39,34 @@ public class Trainer extends JApplet {
 				}
 			}
 		});
+		JButton saver = new JButton("Save");
+		saver.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				JFileChooser jfc = new JFileChooser();
+				if(jfc.showSaveDialog(Trainer.this) == JFileChooser.APPROVE_OPTION) {
+					try {
+						FileOutputStream fos = new FileOutputStream(jfc.getSelectedFile());
+						ObjectOutputStream oos = new ObjectOutputStream(fos);
+						oos.writeObject(labeledCards);
+						oos.close();
+						fos.close();
+					} catch(Exception e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		});
 		getContentPane().setLayout(new FlowLayout());
 		getContentPane().add(chooser);
+		getContentPane().add(saver);
 		this.picLabel = new SelectableLabel(this);
 		getContentPane().add(this.picLabel);
+	}
+	
+	public void append() {
+		labeledCards.add(this.picLabel.cardClass);
 	}
 	
 	private class SelectableLabel extends JLabel {
@@ -51,10 +77,12 @@ public class Trainer extends JApplet {
 		public SelectableLabel(Trainer t) {
 			this.trainer = t;
 			this.cardClass = new SetCard();
+			this.setEnabled(true);
+			this.setFocusable(true);
 			this.addKeyListener(new KeyListener() {
 				
 				@Override
-				public void keyTyped(KeyEvent key) {
+				public void keyReleased(KeyEvent key) {
 					if (key.getKeyChar() == '1') {
 						SelectableLabel.this.cardClass.count = 1;
 					} else if (key.getKeyChar() == '2') {
@@ -84,12 +112,14 @@ public class Trainer extends JApplet {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.SQUIGGLE;
 					}
 					else if (key.getKeyCode() == KeyEvent.VK_ENTER) {
-						System.out.println("ENter!");
+						System.out.println("Recorded!");
+						trainer.append();
+						SelectableLabel.this.setIcon(null);
 					}
 				}
 				
 				@Override
-				public void keyReleased(KeyEvent arg0) {
+				public void keyTyped(KeyEvent arg0) {
 					// TODO Auto-generated method stub
 					
 				}
@@ -103,9 +133,12 @@ public class Trainer extends JApplet {
 		}
 		
 		public void update() {
+			this.requestFocus();
+			this.cardClass = new SetCard();
 			try {
 				BufferedImage myPicture = ImageIO.read(trainer.currentImage);
 				this.setIcon(new ImageIcon(myPicture));
+				this.cardClass.source = trainer.currentImage;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
