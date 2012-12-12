@@ -27,6 +27,7 @@ public class ARFFMaker implements Runnable {
 	private Lock lock = new ReentrantLock();
 	private Condition signal = lock.newCondition();
 	private SetCard card;
+	private boolean done = false;
 	private ArrayList<Float> feat;
 	
 	public static void main(String[] argv) {
@@ -76,20 +77,19 @@ public class ARFFMaker implements Runnable {
 	
 	@SuppressWarnings("unchecked")
 	public ArrayList<Float> remoteGetFeatures(SetCard c) throws InterruptedException {
-		System.out.println("Card attempted to featurize");
 		ArrayList<Float> result = null;
 		lock.lock();
 			while(card != null) {
-				System.out.println("Waiting to put card in queue");
 				signal.await();
 			}
-			System.out.println("Card set");
 			card = c;
+			done = false;
 			signal.signalAll();
-			System.out.println("Waiting for card to finish");
+			System.out.println("Waiting for card");
 			while (feat == null) {
 				signal.await();
 			}
+			System.out.println("Got Result.");
 			result = (ArrayList<Float>)feat.clone();
 			card = null;
 			feat = null;
@@ -137,6 +137,7 @@ public class ARFFMaker implements Runnable {
 			else ps.print("squiggle");
 			ps.println();
 		}
+		ps.close();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -153,7 +154,7 @@ public class ARFFMaker implements Runnable {
 			while (true) {
 				// Get Client
 				lock.lock();
-				while(card == null) {
+				while(card == null || done) {
 					System.out.println("waiting for card");
 					signal.await();
 				}
@@ -161,6 +162,7 @@ public class ARFFMaker implements Runnable {
 
 				//Process
 				out.writeObject(card);
+				done = true;
 				System.out.println("Wrote out a card!");
 				//Write the file.
 				
