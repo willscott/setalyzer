@@ -16,6 +16,7 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -32,7 +33,7 @@ public class Trainer extends JApplet {
 	File currentImage = null;
 	File imageDirectory = null;
 	ArrayList<File> images = null;
-	Iterator<File> imagesIterator = null;
+	ListIterator<File> imagesIterator = null;
 	short imageIndex = 0;
 	SelectableLabel picLabel;
 	ArrayList<SetCard> labeledCards = new ArrayList<SetCard>();
@@ -54,7 +55,7 @@ public class Trainer extends JApplet {
 						}
 					};
 					Trainer.this.images = new ArrayList<File>(Arrays.asList(Trainer.this.imageDirectory.listFiles(filter)));
-					Trainer.this.imagesIterator = Trainer.this.images.iterator();
+					Trainer.this.imagesIterator = Trainer.this.images.listIterator();
 					if (Trainer.this.imagesIterator.hasNext()) {
 						Trainer.this.currentImage = Trainer.this.imagesIterator.next();
 						Trainer.this.picLabel.update();
@@ -96,6 +97,7 @@ public class Trainer extends JApplet {
 		private static final long serialVersionUID = -3508520925542779390L;
 		private Trainer trainer;
 		public SetCard cardClass;
+		private boolean recorded = false;
 
 		public SelectableLabel(Trainer t) {
 			this.trainer = t;
@@ -134,14 +136,25 @@ public class Trainer extends JApplet {
 					} else if (key.getKeyChar() == 'q') {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.SQUIGGLE;
 					}
-					else if (key.getKeyCode() == KeyEvent.VK_ENTER) {
-						System.out.println("Recorded!");
-						trainer.append();
+					else if (key.getKeyCode() == KeyEvent.VK_RIGHT) {
+						if (!recorded) {
+							System.out.println("Recorded!");
+							trainer.append();
+						}
 						SelectableLabel.this.setIcon(null);
 						if (SelectableLabel.this.trainer.imagesIterator.hasNext()) {
 							SelectableLabel.this.trainer.currentImage = SelectableLabel.this.trainer.imagesIterator.next();
 							SelectableLabel.this.update();
 						}
+						else {
+							setText("End of images");
+						}
+					} else if (key.getKeyCode() == KeyEvent.VK_ENTER) {
+						if (!recorded) {
+							System.out.println("Recorded!");
+							trainer.append();
+						}
+						
 					} else if (key.getKeyCode() == KeyEvent.VK_ESCAPE) {
 						System.out.println("Cleared!");
 						SelectableLabel.this.cardClass.location = new ArrayList<Float>();
@@ -191,6 +204,7 @@ public class Trainer extends JApplet {
 				public void mouseClicked(MouseEvent e) {
 					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getX()));
 					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getY()));
+					System.out.println(SelectableLabel.this.cardClass.location);
 				}
 			});
 		}
@@ -200,12 +214,14 @@ public class Trainer extends JApplet {
 			this.requestFocus();
 			this.cardClass = new SetCard();
 			this.cardClass.location = new ArrayList<Float>();
-			try {
-				BufferedImage myPicture = ImageIO.read(trainer.currentImage);
-				this.setIcon(new ImageIcon(myPicture));
-				this.cardClass.source = trainer.currentImage;
-			} catch (IOException e) {
-				e.printStackTrace();
+			if (this.getIcon() == null) {
+				try {
+					BufferedImage myPicture = ImageIO.read(trainer.currentImage);
+					this.setIcon(new ImageIcon(myPicture));
+					this.cardClass.source = trainer.currentImage;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 	}
