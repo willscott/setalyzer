@@ -96,7 +96,7 @@ public class Trainer extends JApplet {
 						SelectableLabel.this.cardClass.shade = SetCard.Shade.EMPTY;
 					} else if (key.getKeyChar() == 'f') {
 						SelectableLabel.this.cardClass.shade = SetCard.Shade.FULL;
-					} else if (key.getKeyChar() == 'v') {
+					} else if (key.getKeyChar() == 's') {
 						SelectableLabel.this.cardClass.shade = SetCard.Shade.SHADED;
 					}
 					else if (key.getKeyChar() == 'r') {
@@ -106,11 +106,11 @@ public class Trainer extends JApplet {
 					} else if (key.getKeyChar() == 'b') {
 						SelectableLabel.this.cardClass.color = SetCard.Color.BLUE;
 					}
-					else if (key.getKeyChar() == 'w') {
+					else if (key.getKeyChar() == 'o') {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.OVAL;
 					} else if (key.getKeyChar() == 'd') {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.DIAMOND;
-					} else if (key.getKeyChar() == 'c') {
+					} else if (key.getKeyChar() == 'q') {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.SQUIGGLE;
 					}
 					else if (key.getKeyCode() == KeyEvent.VK_ENTER) {
@@ -121,6 +121,7 @@ public class Trainer extends JApplet {
 						System.out.println("Cleared!");
 						SelectableLabel.this.cardClass.location = new ArrayList<Float>();
 					}
+					System.out.println(SelectableLabel.this.cardClass);
 				}
 				
 				@Override
