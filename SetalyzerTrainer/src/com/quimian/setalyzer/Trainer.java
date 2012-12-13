@@ -10,9 +10,12 @@ import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -20,6 +23,7 @@ import javax.swing.JApplet;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.quimian.setalyzer.util.SetCard;
 
@@ -27,6 +31,9 @@ public class Trainer extends JApplet {
 	private static final long serialVersionUID = 3527853849015964123L;
 	File currentImage = null;
 	File imageDirectory = null;
+	ArrayList<File> images = null;
+	Iterator<File> imagesIterator = null;
+	short imageIndex = 0;
 	SelectableLabel picLabel;
 	ArrayList<SetCard> labeledCards = new ArrayList<SetCard>();
 
@@ -41,8 +48,17 @@ public class Trainer extends JApplet {
 				if(jfc.showOpenDialog(Trainer.this) == JFileChooser.APPROVE_OPTION) {
 					Trainer.this.imageDirectory = jfc.getSelectedFile();
 					System.out.println("selected " + Trainer.this.imageDirectory.getAbsolutePath());
-//					Trainer.this.currentImage = jfc.getSelectedFile();
-//					Trainer.this.picLabel.update();
+					FilenameFilter filter = new FilenameFilter() {
+						public boolean accept(File dir, String name) {
+							return name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".png");
+						}
+					};
+					Trainer.this.images = new ArrayList<File>(Arrays.asList(Trainer.this.imageDirectory.listFiles(filter)));
+					Trainer.this.imagesIterator = Trainer.this.images.iterator();
+					if (Trainer.this.imagesIterator.hasNext()) {
+						Trainer.this.currentImage = Trainer.this.imagesIterator.next();
+						Trainer.this.picLabel.update();
+					}
 				}
 			}
 		});
@@ -122,6 +138,10 @@ public class Trainer extends JApplet {
 						System.out.println("Recorded!");
 						trainer.append();
 						SelectableLabel.this.setIcon(null);
+						if (SelectableLabel.this.trainer.imagesIterator.hasNext()) {
+							SelectableLabel.this.trainer.currentImage = SelectableLabel.this.trainer.imagesIterator.next();
+							SelectableLabel.this.update();
+						}
 					} else if (key.getKeyCode() == KeyEvent.VK_ESCAPE) {
 						System.out.println("Cleared!");
 						SelectableLabel.this.cardClass.location = new ArrayList<Float>();
