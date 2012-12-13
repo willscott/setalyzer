@@ -52,7 +52,7 @@ public class SetCard implements Serializable {
 			s.append(" " + "Blue");
 		}
 		else if (this.color == Color.GREEN) {
-			s.append(" " + "Red");
+			s.append(" " + "Green");
 		}
 		if (this.shape == Shape.DIAMOND) {
 			s.append(" " + "Diamond");
@@ -72,6 +72,7 @@ public class SetCard implements Serializable {
 		else if (this.shade == Shade.FULL) {
 			s.append(" " + "Full");
 		}
+		s.append(" @ " + this.location);
 		return s.toString();
 	}
 
