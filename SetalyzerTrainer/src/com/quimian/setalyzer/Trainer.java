@@ -30,6 +30,7 @@ public class Trainer extends JApplet {
 	ArrayList<SetCard> labeledCards = new ArrayList<SetCard>();
 
 	public void init() {
+		this.resize(1000, 1000);
 		JButton chooser  = new JButton("Select file");
 		chooser.addActionListener(new ActionListener() {
 			@Override
