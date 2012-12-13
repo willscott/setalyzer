@@ -34,6 +34,7 @@ public class SetCard implements Serializable {
 		FULL
 	}
 	
+	
 	// Note: source is optional - used for training.
 	public File source;
 	public Object location;
@@ -41,5 +42,37 @@ public class SetCard implements Serializable {
 	public short count;
 	public Shape shape;
 	public Shade shade;
+	
+	public String toString() {
+		StringBuffer s = new StringBuffer(Integer.toString(this.count));
+		if (this.color == Color.RED) {
+			s.append(" " + "Red");
+		}
+		else if (this.color == Color.BLUE) {
+			s.append(" " + "Blue");
+		}
+		else if (this.color == Color.GREEN) {
+			s.append(" " + "Red");
+		}
+		if (this.shape == Shape.DIAMOND) {
+			s.append(" " + "Diamond");
+		}
+		else if (this.shape == Shape.OVAL) {
+			s.append(" " + "Oval");
+		}
+		else if (this.shape == Shape.SQUIGGLE) {
+			s.append(" " + "Squiggle");
+		}
+		if (this.shade == Shade.EMPTY) {
+			s.append(" " + "Empty");
+		}
+		else if (this.shade == Shade.SHADED) {
+			s.append(" " + "Shaded");
+		}
+		else if (this.shade == Shade.FULL) {
+			s.append(" " + "Full");
+		}
+		return s.toString();
+	}
 
 }
