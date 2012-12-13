@@ -1,6 +1,8 @@
 package com.quimian.setalyzer;
 
+import java.awt.Color;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -110,31 +112,43 @@ public class Trainer extends JApplet {
 				public void keyReleased(KeyEvent key) {
 					if (key.getKeyChar() == '1') {
 						SelectableLabel.this.cardClass.count = 1;
+						recorded = false;
 					} else if (key.getKeyChar() == '2') {
 						SelectableLabel.this.cardClass.count = 2;	
+						recorded = false;
 					} else if (key.getKeyChar() == '3') {
 						SelectableLabel.this.cardClass.count = 3;
+						recorded = false;
 					}
 					else if (key.getKeyChar() == 'e') {
 						SelectableLabel.this.cardClass.shade = SetCard.Shade.EMPTY;
+						recorded = false;
 					} else if (key.getKeyChar() == 'f') {
 						SelectableLabel.this.cardClass.shade = SetCard.Shade.FULL;
+						recorded = false;
 					} else if (key.getKeyChar() == 's') {
 						SelectableLabel.this.cardClass.shade = SetCard.Shade.SHADED;
+						recorded = false;
 					}
 					else if (key.getKeyChar() == 'r') {
 						SelectableLabel.this.cardClass.color = SetCard.Color.RED;
+						recorded = false;
 					} else if (key.getKeyChar() == 'g') {
 						SelectableLabel.this.cardClass.color = SetCard.Color.GREEN;
+						recorded = false;
 					} else if (key.getKeyChar() == 'b') {
 						SelectableLabel.this.cardClass.color = SetCard.Color.BLUE;
+						recorded = false;
 					}
 					else if (key.getKeyChar() == 'o') {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.OVAL;
+						recorded = false;
 					} else if (key.getKeyChar() == 'd') {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.DIAMOND;
+						recorded = false;
 					} else if (key.getKeyChar() == 'q') {
 						SelectableLabel.this.cardClass.shape = SetCard.Shape.SQUIGGLE;
+						recorded = false;
 					}
 					else if (key.getKeyCode() == KeyEvent.VK_RIGHT) {
 						if (!recorded) {
@@ -153,11 +167,15 @@ public class Trainer extends JApplet {
 						if (!recorded) {
 							System.out.println("Recorded!");
 							trainer.append();
+							SelectableLabel.this.update();
+							SelectableLabel.this.repaint();
+							recorded = true;
 						}
 						
 					} else if (key.getKeyCode() == KeyEvent.VK_ESCAPE) {
 						System.out.println("Cleared!");
 						SelectableLabel.this.cardClass.location = new ArrayList<Float>();
+						SelectableLabel.this.repaint();
 					}
 					System.out.println(SelectableLabel.this.cardClass);
 				}
@@ -205,10 +223,21 @@ public class Trainer extends JApplet {
 					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getX()));
 					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getY()));
 					System.out.println(SelectableLabel.this.cardClass.location);
+					SelectableLabel.this.repaint();
 				}
 			});
 		}
 		
+		protected void paintComponent(Graphics g) {
+			super.paintComponent(g);
+			ArrayList<Float> location = (ArrayList<Float>)SelectableLabel.this.cardClass.location;
+			for (int i=0; i<location.size(); i+=2) {
+				int x = Math.round(location.get(i));
+				int y = Math.round(location.get(i+1));
+				g.setColor(Color.RED);
+				g.fillRect(x-2, y-2, 4, 4);
+			}
+		}
 		
 		public void update() {
 			this.requestFocus();
