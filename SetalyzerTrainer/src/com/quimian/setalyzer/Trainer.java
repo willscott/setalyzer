@@ -223,6 +223,7 @@ public class Trainer extends JApplet {
 					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getX()));
 					((ArrayList<Float>)SelectableLabel.this.cardClass.location).add(new Float(e.getY()));
 					System.out.println(SelectableLabel.this.cardClass.location);
+					recorded = false;
 					SelectableLabel.this.repaint();
 				}
 			});
