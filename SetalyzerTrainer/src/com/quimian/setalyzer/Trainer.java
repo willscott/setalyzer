@@ -26,19 +26,23 @@ import com.quimian.setalyzer.util.SetCard;
 public class Trainer extends JApplet {
 	private static final long serialVersionUID = 3527853849015964123L;
 	File currentImage = null;
+	File imageDirectory = null;
 	SelectableLabel picLabel;
 	ArrayList<SetCard> labeledCards = new ArrayList<SetCard>();
 
 	public void init() {
 		this.resize(1000, 1000);
-		JButton chooser  = new JButton("Select file");
+		JButton chooser  = new JButton("Select Directory");
 		chooser.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				JFileChooser jfc = new JFileChooser();
+				jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				if(jfc.showOpenDialog(Trainer.this) == JFileChooser.APPROVE_OPTION) {
-					Trainer.this.currentImage = jfc.getSelectedFile();
-					Trainer.this.picLabel.update();
+					Trainer.this.imageDirectory = jfc.getSelectedFile();
+					System.out.println("selected " + Trainer.this.imageDirectory.getAbsolutePath());
+//					Trainer.this.currentImage = jfc.getSelectedFile();
+//					Trainer.this.picLabel.update();
 				}
 			}
 		});
