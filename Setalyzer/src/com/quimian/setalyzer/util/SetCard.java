@@ -12,9 +12,6 @@ public class SetCard implements Serializable {
 
 	public SetCard() {
 		this.location = null;
-		if (this.color == null) {
-			System.out.println("Java enums start as null");
-		}
 	}
 	
 	public SetCard(Object roi) {
@@ -41,16 +38,17 @@ public class SetCard implements Serializable {
 	// Note: source is optional - used for training.
 	public File source;
 	public Object location;
-	public Color color;
-	public short count;
-	public Shape shape;
-	public Shade shade;
+	public Color color = null;
+	public short count = 0;
+	public Shape shape = null;
+	public Shade shade = null;
 	
 	public boolean allAttributesSet() {
 		return ((ArrayList) location).size() == 8 &&
 				color != null &&
 				shape != null &&
-				shade != null;
+				shade != null &&
+				count != 0;
 	}
 	public String toString() {
 		StringBuffer s = new StringBuffer(Integer.toString(this.count));
