@@ -1,5 +1,6 @@
 package com.quimian.setalyzer;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -143,8 +144,8 @@ public class ARFFMaker implements Runnable {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void run() {
-		while (true) {
 		try {
+			File lastSeenSource = null;;
 			ServerSocket ss = new ServerSocket(9090);
 			System.out.println("Waiting for connection");
 			Socket client = ss.accept();
@@ -162,19 +163,39 @@ public class ARFFMaker implements Runnable {
 
 				//Process
 				out.writeObject(card);
-				done = true;
 				System.out.println("Wrote out a card!");
+				File source = card.source;
+				//Since our labeler isn't good about attaching source everywhere it needs to.
+				if (source == null) {
+					source = lastSeenSource;
+				} else {
+					lastSeenSource = source;
+				}
+				Long length = source.length();
+				System.out.println("Needing write card of length " + length);
+				out.writeObject(length);
+				FileInputStream is = new FileInputStream(source);
+				byte[] buf = new byte[length.intValue()];
+				is.read(buf);
+				out.write(buf);
+				out.flush();
+				System.out.println("wrote out buffer");
+				is.close();
+				done = true;
 				//Write the file.
 				
 				feat = (ArrayList<Float>)in.readObject();
+				if (feat.size() > 0) {
 				System.out.println(feat.get(0));
+				} else {
+					System.out.println("no features!");
+				}
 
 				signal.signalAll();
 				lock.unlock();
 			}
 		} catch(Exception e) {
 			e.printStackTrace();
-		}
 		}
 	}
 }
