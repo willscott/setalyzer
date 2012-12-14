@@ -185,7 +185,11 @@ public class ARFFMaker implements Runnable {
 				//Write the file.
 				
 				feat = (ArrayList<Float>)in.readObject();
+				if (feat.size() > 0) {
 				System.out.println(feat.get(0));
+				} else {
+					System.out.println("no features!");
+				}
 
 				signal.signalAll();
 				lock.unlock();
