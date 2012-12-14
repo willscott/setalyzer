@@ -1,12 +1,32 @@
 package com.quimian.setalyzer;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
+import com.quimian.setalyzer.util.DistanceMetric;
+
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import boofcv.android.ConvertBitmap;
 import boofcv.struct.image.ImageUInt8;
 
 public class FeatureExtractor {	
+	private static ArrayList<ImageUInt8> refData = new ArrayList<ImageUInt8>();
+	public static void loadRefData(Context c) {
+		try {
+			String[] imgs = c.getAssets().list("phoneref");
+			for(String img : imgs) {
+				Bitmap bmap = BitmapFactory.decodeStream(c.getAssets().open("phoneref/" + img));
+				ImageUInt8 ref = ConvertBitmap.bitmapToGray(bmap, (ImageUInt8)null, null);
+				refData.add(ref);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public static ArrayList<Float> getFeatures(ImageUInt8 image, Bitmap color) {
 		ArrayList<Float> features = new ArrayList<Float>();
 
@@ -15,6 +35,10 @@ public class FeatureExtractor {
 			features.add(Float.valueOf(avgs[i]));
 		}
 		// Get Features.
+		for (ImageUInt8 ref : refData) {
+			features.add(Float.valueOf(DistanceMetric.distance(image, ref)));
+		}
+		
 		return features;
 	}
 

@@ -188,7 +188,7 @@ public class SetViewerActivity extends Activity implements PreviewCallback, Surf
 				handleTrain(v);
 			}
 		});
-		
+		FeatureExtractor.loadRefData(this);
 	} //end of onCreate
 	
 	public void handleTrain(View v) {

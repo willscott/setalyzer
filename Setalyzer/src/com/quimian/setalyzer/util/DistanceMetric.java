@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.quimian.setalyzer;
+package com.quimian.setalyzer.util;
 
 import boofcv.abst.feature.associate.GeneralAssociation;
 import boofcv.abst.feature.associate.ScoreAssociation;
@@ -36,7 +36,6 @@ import boofcv.struct.image.ImageFloat32;
 import boofcv.struct.image.ImageSingleBand;
 import georegression.struct.point.Point2D_F64;
 
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -138,9 +137,9 @@ public class DistanceMetric<T extends ImageSingleBand, FD extends TupleDesc> {
 		}
 	}
 
-	public static double distance( ImageFloat32 imageA, ImageFloat32 imageB ) {
+	public static <T extends ImageSingleBand> float distance( T imageA, T imageB ) {
 
-		Class imageType = ImageFloat32.class;
+		Class imageType = imageA.getClass();
 
 		// select which algorithms to use
 		InterestPointDetector detector = FactoryInterestPoint.fastHessian(1, 2, 200, 1, 9, 4, 4);
@@ -157,22 +156,7 @@ public class DistanceMetric<T extends ImageSingleBand, FD extends TupleDesc> {
 //		BufferedImage imageB = UtilImageIO.loadImage("data/evaluation/stitch/kayak_03.jpg");
 //		BufferedImage imageB = UtilImageIO.loadImage("data/evaluation/particles01.jpg");
 
-		double distance = app.associate(imageA,imageB);
+		float distance = (float)app.associate(imageA,imageB);
 		return distance;
-	}
-	
-	public static void main( String[] argv ) {
-		Class imageType = ImageFloat32.class;
-	
-		BufferedImage imageA = UtilImageIO.loadImage("/Users/adam/android_opencv_workspace/BoofCV/data/evaluation/stitch/kayak_01.jpg");
-		BufferedImage imageB = UtilImageIO.loadImage("/Users/adam/android_opencv_workspace/BoofCV/data/evaluation/stitch/kayak_03.jpg");
-//		BufferedImage imageB = UtilImageIO.loadImage("/Users/adam/android_opencv_workspace/BoofCV/data/evaluation/particles01.jpg");
-
-		ImageFloat32 inputA = ConvertBufferedImage.convertFromSingle(imageA, null, imageType);
-		ImageFloat32 inputB = ConvertBufferedImage.convertFromSingle(imageB, null, imageType);	
-		
-//		System.out.println(distance(inputA, inputB));
-		
-		
 	}
 }
