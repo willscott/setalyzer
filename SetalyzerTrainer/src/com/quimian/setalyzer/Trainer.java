@@ -32,6 +32,8 @@ import com.quimian.setalyzer.util.SetCard;
 
 public class Trainer extends JApplet {
 	private static final long serialVersionUID = 3527853849015964123L;
+	public static final String directoryName = "/Users/adam/Dropbox/Camera Uploads/setalyzer_images/board";
+	
 	File currentImage = null;
 	File imageDirectory = null;
 	ArrayList<File> images = null;
@@ -46,7 +48,7 @@ public class Trainer extends JApplet {
 		chooser.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				JFileChooser jfc = new JFileChooser();
+				JFileChooser jfc = new JFileChooser(directoryName);
 				jfc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				if(jfc.showOpenDialog(Trainer.this) == JFileChooser.APPROVE_OPTION) {
 					Trainer.this.imageDirectory = jfc.getSelectedFile();
@@ -70,7 +72,7 @@ public class Trainer extends JApplet {
 
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				JFileChooser jfc = new JFileChooser();
+				JFileChooser jfc = new JFileChooser(Trainer.directoryName);
 				if(jfc.showSaveDialog(Trainer.this) == JFileChooser.APPROVE_OPTION) {
 					try {
 						FileOutputStream fos = new FileOutputStream(jfc.getSelectedFile());
@@ -93,6 +95,7 @@ public class Trainer extends JApplet {
 	
 	public void append() {
 		labeledCards.add(this.picLabel.cardClass);
+		
 	}
 	
 	private class SelectableLabel extends JLabel {
@@ -151,9 +154,12 @@ public class Trainer extends JApplet {
 						recorded = false;
 					}
 					else if (key.getKeyCode() == KeyEvent.VK_RIGHT) {
-						if (!recorded) {
+						if (!recorded && SelectableLabel.this.cardClass.allAttributesSet()) {
 							System.out.println("Recorded!");
 							trainer.append();
+						}
+						else {
+							System.out.println("Not recorded because attributes not yet set");
 						}
 						SelectableLabel.this.setIcon(null);
 						if (SelectableLabel.this.trainer.imagesIterator.hasNext()) {
@@ -164,12 +170,15 @@ public class Trainer extends JApplet {
 							setText("End of images");
 						}
 					} else if (key.getKeyCode() == KeyEvent.VK_ENTER) {
-						if (!recorded) {
+						if (!recorded && SelectableLabel.this.cardClass.allAttributesSet()) {
 							System.out.println("Recorded!");
 							trainer.append();
 							SelectableLabel.this.update();
 							SelectableLabel.this.repaint();
 							recorded = true;
+						}
+						else {
+							System.out.println("Not recorded because attributes not yet set");
 						}
 						
 					} else if (key.getKeyCode() == KeyEvent.VK_ESCAPE) {
